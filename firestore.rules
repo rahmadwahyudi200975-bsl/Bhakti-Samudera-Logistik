@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function isValidShipment(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.jobNo is string && data.jobNo.size() <= 128
+        && data.customerName is string && data.customerName.size() <= 256
+        && data.status is string
+        && data.shipmentType is string;
+    }
+    
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.email is string && data.email.size() <= 256
+        && data.fullName is string && data.fullName.size() <= 256
+        && data.role is string
+        && data.password is string;
+    }
+
+    function isValidLog(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.username is string && data.username.size() <= 256
+        && data.action is string && data.action.size() <= 1000
+        && data.timestamp is string;
+    }
+
+    function isValidLogo(data) {
+      return data.logo is string && data.logo.size() <= 20000000;
+    }
+
+    match /shipments/{shipmentId} {
+      allow get, list, create, update, delete: if true; 
+    }
+
+    match /registeredUsers/{userId} {
+      allow get, list, create, update, delete: if true;
+    }
+
+    match /activityLogs/{logId} {
+      allow get, list, create, update, delete: if true;
+    }
+
+    match /brandConfig/logo {
+      allow get, create, update, delete: if true;
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "Shipment": {
+      "title": "Shipment",
+      "description": "Represents an active or completed operational customs clearance shipment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shipmentType": { "type": "string", "enum": ["Export", "Import"] },
+        "jobNo": { "type": "string" },
+        "customerName": { "type": "string" },
+        "commodity": { "type": "string" },
+        "eta": { "type": "string" },
+        "blNumber": { "type": "string" },
+        "pibNo": { "type": "string" },
+        "containerSize": { "type": "string", "enum": ["20ft", "40ft", "40ft HC", "LCL"] },
+        "containerQty": { "type": "number" },
+        "containerNumber": { "type": "string" },
+        "portOfDischarge": { "type": "string" },
+        "targetCompletionDate": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Draft",
+            "Document Checking",
+            "Submit PIB",
+            "Billing Issued",
+            "Paid Pending SPPB",
+            "Red Channel / Behandle",
+            "SPPB Issued",
+            "Gate Out / Delivery",
+            "Completed",
+            "Cancelled"
+          ]
+        },
+        "customsLane": { "type": "string", "enum": ["GREEN LANE", "YELLOW LANE", "RED LANE"] },
+        "notes": { "type": "string" },
+        "isApproved": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "invoiceStatus": { "type": "string", "enum": ["Unbilled", "Invoiced", "Paid"] },
+        "cashFlowStatus": { "type": "string", "enum": ["Unfunded", "Funded (Active)", "Settled (Paid)"] }
+      },
+      "required": ["id", "jobNo", "customerName", "status", "shipmentType"]
+    },
+    "RegisteredUser": {
+      "title": "RegisteredUser",
+      "description": "Information about registered corporate staff user with dashboard access permissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "role": {
+          "type": "string",
+          "enum": [
+            "President Director",
+            "Director of Operation",
+            "Director of Finance",
+            "Finance Staff",
+            "Operation Staff",
+            "Staff",
+            "Director"
+          ]
+        },
+        "password": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "email", "fullName", "role", "password"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Audit trail logs tracking user actions across operational and cash flow elements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shipmentId": { "type": "string" },
+        "jobNo": { "type": "string" },
+        "username": { "type": "string" },
+        "role": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "username", "action", "timestamp"]
+    },
+    "CompanyLogo": {
+      "title": "CompanyLogo",
+      "description": "Dynamic base64 image used as the dashboard wide custom organization brand icon",
+      "type": "object",
+      "properties": {
+        "logo": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "shipments/{shipmentId}": {
+      "schema": "Shipment",
+      "description": "Collection of all shipments tracked in the system"
+    },
+    "registeredUsers/{userId}": {
+      "schema": "RegisteredUser",
+      "description": "Collection of allowed registered corporate users"
+    },
+    "activityLogs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Collection of audit trail and system logging entries"
+    },
+    "brandConfig/logo": {
+      "schema": "CompanyLogo",
+      "description": "Single document holding the dynamic company logo base64 source"
+    }
+  }
+}
