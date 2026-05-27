@@ -35,9 +35,9 @@ export function getShipmentTotalRevenue(shipment: Shipment): number {
 }
 
 // Helper to calculate Gross Profit (Margin)
-// Since total billing is equal to direct service fees, the profit is equal to this revenue.
+// Gross Profit = REVENUE (total billing / service fees) after subtracting OPERATION COST (reimbursement funding / actual costs)
 export function getShipmentProfit(shipment: Shipment): number {
-  return getShipmentTotalRevenue(shipment);
+  return getShipmentTotalRevenue(shipment) - getSumOfCosts(shipment.actualCosts);
 }
 
 // Helpers for rupiah formatting

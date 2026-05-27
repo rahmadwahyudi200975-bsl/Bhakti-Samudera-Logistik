@@ -102,12 +102,11 @@ export default function DashboardView() {
     ['SPPB Issued', 'Gate Out / Delivery'].includes(s.status)
   ).length;
 
-  // Total cash tied up in funding (Excludes Paid or completed reimburse)
-  const activeTalanganRows = shipments.filter(s => s.cashFlowStatus !== 'Settled (Paid)');
-  const totalActiveTalangan = activeTalanganRows.reduce((acc, s) => acc + getSumOfCosts(s.actualCosts), 0);
-  const totalActiveEstimates = activeTalanganRows.reduce((acc, s) => acc + getSumOfCosts(s.estimatedCosts), 0);
+  // Total Operation Costs (Sum of actual Reimbursement Funding of each shipment)
+  const totalOperationCost = shipments.reduce((acc, s) => acc + getSumOfCosts(s.actualCosts), 0);
+  const totalEstimatedCost = shipments.reduce((acc, s) => acc + getSumOfCosts(s.estimatedCosts), 0);
 
-  // Total Company revenue (fees + reimbursed costs)
+  // Total Company revenue (Direct Service Fees)
   const totalRevenue = shipments.reduce((acc, s) => acc + getShipmentTotalRevenue(s), 0);
 
   // Total pure services fees (BBS's direct value-added margins)
@@ -115,8 +114,8 @@ export default function DashboardView() {
     return acc + (s.revenue.handlingFee + s.revenue.truckingSelling + s.revenue.undernameSelling + s.revenue.reimbursementMarkup);
   }, 0);
 
-  // Pure profits
-  const totalProfit = shipments.reduce((acc, s) => acc + getShipmentProfit(s), 0);
+  // Gross Profit = REVENUE - OPERATION COST
+  const totalProfit = totalRevenue - totalOperationCost;
   const averageMarginPercent = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
   // 3. COMPILE DATA FOR MONTHLY SHIPMENTS (BAR CHART)
@@ -310,7 +309,7 @@ export default function DashboardView() {
         {/* Condition-based secondary grid blocks */}
         {currentRole === 'Director' ? (
           <>
-            {/* Cash flow tied up (Estimasi vs Realisasi Talangan) */}
+            {/* Total Operation Cost (Sum of all actual reimbursement funding) */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Operation Cost</span>
@@ -319,15 +318,15 @@ export default function DashboardView() {
                 </div>
               </div>
               <div className="mt-4">
-                <span className="text-2xl font-extrabold text-slate-850 dark:text-white block tracking-tight font-mono">
-                  {formatRupiah(totalActiveTalangan)}
+                <span className="text-2xl font-extrabold text-slate-855 dark:text-white block tracking-tight font-mono">
+                  {formatRupiah(totalOperationCost)}
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-1">
-                  Budgeted plan: {formatRupiah(totalActiveEstimates)}
+                  Budgeted plan: {formatRupiah(totalEstimatedCost)}
                 </span>
               </div>
               <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 leading-normal">
-                Active working capital currently disbursed as port advances.
+                Total port advances representing actual reimbursement funding.
               </div>
             </div>
 
