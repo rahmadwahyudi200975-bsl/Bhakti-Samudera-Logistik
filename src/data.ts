@@ -22,25 +22,22 @@ export function getSumOfCosts(costs: CostBreakdown): number {
 }
 
 // Helper to calculate total revenue
-// Total Revenue = Reimbursed Actual Costs + handlingFee + truckingSelling + undernameSelling + reimbursementMarkup
+// Total Revenue = handlingFee + truckingSelling + undernameSelling + reimbursementMarkup (equal to Direct Service Fees)
 export function getShipmentTotalRevenue(shipment: Shipment): number {
-  const actualTalangan = getSumOfCosts(shipment.actualCosts);
   const serviceRevenue = 
     shipment.revenue.handlingFee + 
     shipment.revenue.truckingSelling + 
     shipment.revenue.undernameSelling + 
     shipment.revenue.reimbursementMarkup;
   
-  // Total client bill includes returning the paid talangan + service fees
-  return actualTalangan + serviceRevenue;
+  // Total client bill is equal to the direct service fees
+  return serviceRevenue;
 }
 
 // Helper to calculate Gross Profit (Margin)
-// Gross Profit = Total Revenue - Total Actual Costs = handlingFee + truckingSelling + undernameSelling + reimbursementMarkup
+// Since total billing is equal to direct service fees, the profit is equal to this revenue.
 export function getShipmentProfit(shipment: Shipment): number {
-  const revenue = getShipmentTotalRevenue(shipment);
-  const actualCost = getSumOfCosts(shipment.actualCosts);
-  return revenue - actualCost;
+  return getShipmentTotalRevenue(shipment);
 }
 
 // Helpers for rupiah formatting

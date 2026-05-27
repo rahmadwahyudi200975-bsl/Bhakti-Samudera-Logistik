@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Shipment, ActivityLog, User, UserRole, RegisteredUser } from '../types';
 import { initialShipments, initialActivityLogs } from '../data';
 
@@ -178,6 +178,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   });
 
+  const currentVersionRef = useRef<number>(0);
+
+  const fetchServerState = async () => {
+    try {
+      const res = await fetch('/api/state');
+      if (!res.ok) throw new Error('Failed to fetch state');
+      const data = await res.json();
+      
+      setShipments(data.shipments);
+      setActivityLogs(data.activityLogs);
+      setRegisteredUsers(data.registeredUsers);
+      setCompanyLogo(data.companyLogo);
+      if (data.companyLogo) {
+        localStorage.setItem('bsl_company_logo_v2', data.companyLogo);
+        window.dispatchEvent(new Event('company-logo-updated'));
+      } else {
+        localStorage.removeItem('bsl_company_logo_v2');
+      }
+      currentVersionRef.current = data.version;
+    } catch (err) {
+      console.warn('Real-time sync error (offline/fallback mode):', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchServerState();
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/version');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.version && data.version !== currentVersionRef.current) {
+          await fetchServerState();
+        }
+      } catch (err) {
+        // Network offline/reconnecting
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Sync state with localstorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SHIPMENTS, JSON.stringify(shipments));
@@ -232,7 +275,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [darkMode]);
 
   // Actions
-  const addLog = (action: string, shipmentId: string, jobNo: string) => {
+  const addLog = async (action: string, shipmentId: string, jobNo: string) => {
     const newLog: ActivityLog = {
       id: `LOG-${Date.now().toString().slice(-4)}`,
       shipmentId,
@@ -243,9 +286,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString()
     };
     setActivityLogs(prev => [newLog, ...prev]);
+
+    try {
+      const res = await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLog)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentVersionRef.current = data.version;
+      }
+    } catch (err) {
+      console.error('Error posting log context', err);
+    }
   };
 
-  const addShipment = (shipmentData: Omit<Shipment, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addShipment = async (shipmentData: Omit<Shipment, 'id' | 'createdAt' | 'updatedAt'>) => {
     const today = new Date().toISOString().split('T')[0];
     const sequence = (shipments.length + 1).toString().padStart(4, '0');
     const newId = `BSL-2026-${sequence}`;
@@ -259,9 +316,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setShipments(prev => [newShipment, ...prev]);
     addLog(`Created new shipment [${newId}] - Client: ${newShipment.customerName}`, newId, newShipment.jobNo);
+
+    try {
+      const res = await fetch('/api/shipments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newShipment)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentVersionRef.current = data.version;
+      }
+    } catch (err) {
+      console.error('Error adding shipment to server', err);
+    }
   };
 
-  const updateShipment = (updatedShipment: Shipment) => {
+  const updateShipment = async (updatedShipment: Shipment) => {
     const today = new Date().toISOString().split('T')[0];
     const shipmentToUpdate = {
       ...updatedShipment,
@@ -270,17 +341,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setShipments(prev => prev.map(item => item.id === updatedShipment.id ? shipmentToUpdate : item));
     addLog(`Updated shipment [${updatedShipment.id}] - Customs Status: ${updatedShipment.status}`, updatedShipment.id, updatedShipment.jobNo);
+
+    try {
+      const res = await fetch(`/api/shipments/${updatedShipment.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shipmentToUpdate)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentVersionRef.current = data.version;
+      }
+    } catch (err) {
+      console.error('Error updating shipment server-side', err);
+    }
   };
 
-  const deleteShipment = (id: string) => {
+  const deleteShipment = async (id: string) => {
     const shipment = shipments.find(item => item.id === id);
     if (shipment) {
       setShipments(prev => prev.filter(item => item.id !== id));
       addLog(`Deleted shipment [${id}] - Client: ${shipment.customerName}`, id, shipment.jobNo);
+
+      try {
+        const res = await fetch(`/api/shipments/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentVersionRef.current = data.version;
+        }
+      } catch (err) {
+        console.error('Error deleting shipment server-side', err);
+      }
     }
   };
 
-  const approveShipment = (id: string) => {
+  const approveShipment = async (id: string) => {
     setShipments(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, isApproved: true, cashFlowStatus: 'Funded (Active)' };
@@ -290,6 +387,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const shipment = shipments.find(item => item.id === id);
     if (shipment) {
       addLog(`Approved operational funding for shipment [${id}]`, id, shipment.jobNo);
+    }
+
+    try {
+      const res = await fetch(`/api/shipments/${id}/approve`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentVersionRef.current = data.version;
+      }
+    } catch (err) {
+      console.error('Error approving shipment budgets', err);
     }
   };
 
@@ -340,22 +449,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
-  const resetPassword = (role: UserRole, newPw: string) => {
+  const resetPassword = async (role: UserRole, newPw: string) => {
     if (role === 'Director') {
       localStorage.setItem('bsl_director_pw', newPw);
     } else {
       localStorage.setItem('bsl_staff_pw', newPw);
     }
 
+    let updatedObj: RegisteredUser | undefined = undefined;
     // Also update in registeredUsers
     setRegisteredUsers(prev => prev.map(u => {
       if (u.role === role) {
-        return { ...u, password: newPw };
+        updatedObj = { ...u, password: newPw };
+        return updatedObj;
       }
       return u;
     }));
 
     addLog(`Changed security credentials for ${role}`, 'SYSTEM', 'SECURITY');
+
+    if (updatedObj) {
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedObj)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentVersionRef.current = data.version;
+        }
+      } catch (err) {
+        console.error('Error resetting credentials server-side', err);
+      }
+    }
   };
 
   const logout = () => {
@@ -369,7 +496,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDarkMode(prev => !prev);
   };
 
-  const registerUser = (email: string, fullName: string, role: UserRole, password?: string) => {
+  const registerUser = async (email: string, fullName: string, role: UserRole, password?: string) => {
     const newUser: RegisteredUser = {
       id: `usr-${Date.now().toString().slice(-4)}`,
       email: email.trim(),
@@ -380,33 +507,77 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     setRegisteredUsers(prev => [...prev, newUser]);
     addLog(`Registered new user access: ${fullName} (${role})`, 'SYSTEM', 'ACCESS');
+
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentVersionRef.current = data.version;
+      }
+    } catch (err) {
+      console.error('Error registering user server-side', err);
+    }
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     const user = registeredUsers.find(u => u.id === id);
     if (user) {
       setRegisteredUsers(prev => prev.filter(u => u.id !== id));
       addLog(`Removed user access: ${user.fullName} (${user.role})`, 'SYSTEM', 'ACCESS');
+
+      try {
+        const res = await fetch(`/api/users/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentVersionRef.current = data.version;
+        }
+      } catch (err) {
+        console.error('Error deleting user server-side', err);
+      }
     }
   };
 
-  const updateUser = (id: string, email: string, fullName: string, role: UserRole, password?: string) => {
+  const updateUser = async (id: string, email: string, fullName: string, role: UserRole, password?: string) => {
+    let updatedObj: RegisteredUser | undefined = undefined;
     setRegisteredUsers(prev => prev.map(u => {
       if (u.id === id) {
-        return {
+        updatedObj = {
           ...u,
           email: email.trim(),
           fullName: fullName.trim(),
           role,
           password: password || u.password
         };
+        return updatedObj;
       }
       return u;
     }));
     addLog(`Updated corporate staff access privileges for: ${fullName} (${role})`, 'SYSTEM', 'ACCESS');
+
+    if (updatedObj) {
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedObj)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentVersionRef.current = data.version;
+        }
+      } catch (err) {
+        console.error('Error updating status server-side', err);
+      }
+    }
   };
 
-  const updateCompanyLogo = (logo: string | null) => {
+  const updateCompanyLogo = async (logo: string | null) => {
     setCompanyLogo(logo);
     if (logo) {
       localStorage.setItem('bsl_company_logo_v2', logo);
@@ -416,6 +587,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Fire event so CompanyLogo components update instantly
     window.dispatchEvent(new Event('company-logo-updated'));
     addLog('Updated company logo configuration', 'SYSTEM', 'BRANDING');
+
+    try {
+      const res = await fetch('/api/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentVersionRef.current = data.version;
+      }
+    } catch (err) {
+      console.error('Error updating company logo server side', err);
+    }
   };
 
   return (

@@ -108,7 +108,7 @@ export default function RevenueView() {
           </p>
           <ol className="list-decimal pl-5 space-y-2 text-slate-650 dark:text-slate-400 font-medium">
             <li>
-              <strong>Total Invoice (Billing Value)</strong> = <span className="text-blue-700 font-bold dark:text-blue-450">Reimbursement of Actual Funding Disbursed</span> + <span className="text-teal-750 font-bold dark:text-teal-400">Total Direct Service Brokerage Fees</span>
+              <strong>Total Invoice (Billing Value)</strong> = <span className="text-teal-750 font-bold dark:text-teal-400">Total Direct Service Brokerage Fees</span> (Exclusive of pass-through disbursements)
             </li>
             <li>
               <strong>Total Spend Advanced</strong> = Realized sum representing DO container, storage tariffs, PDRI Taxes, physical Inspection, and field operations.
@@ -117,7 +117,7 @@ export default function RevenueView() {
               <strong>BSL Net Profit Margin</strong> = Clear brokerage service handle fee + trucking sell commission markup + undername license selling markup.
             </li>
             <li>
-              <strong>Invoice Settled (Paid)</strong> = Updated when the importer pays their consolidated invoice. This switches the cash flow to <strong>Settled (Paid)</strong> to free the working capital.
+              <strong>Invoice Settled (Paid)</strong> = Updated when the importer pays their service fee invoice. This switches the cash flow to <strong>Settled (Paid)</strong> to free the working capital.
             </li>
           </ol>
         </div>
