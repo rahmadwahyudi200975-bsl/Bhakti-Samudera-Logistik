@@ -34,7 +34,8 @@ export default function AdminSettingsDesk() {
     companyLogo, 
     updateCompanyLogo,
     currentUser,
-    currentRole
+    currentRole,
+    wipeAllShipments
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -745,6 +746,56 @@ export default function AdminSettingsDesk() {
               </div>
             </div>
 
+          </div>
+
+          {/* Section 3: Danger Zone */}
+          <div className="pt-8 border-t border-dashed border-red-200 dark:border-red-900/30">
+            <div className="rounded-2xl border border-red-205 bg-red-50/15 dark:border-red-900/20 dark:bg-rose-950/5 p-5 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1.5 max-w-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-red-600 dark:bg-red-400 animate-ping" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">Database Administration</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    Hapus Semua Data Shipment (Wipe Database)
+                  </h4>
+                  <p className="text-xs text-slate-550 leading-relaxed dark:text-slate-400">
+                    This action will permanently delete all shipments, estimated cost entries, operational invoices, customs checklists, and active budgets from active Firestore. This action is IRREVERSIBLE.
+                  </p>
+                </div>
+
+                <div className="self-start md:self-center shrink-0">
+                  <button
+                    type="button"
+                    disabled={!isWritable}
+                    onClick={async () => {
+                      if (!isWritable) return;
+                      if (confirm("🚨 WARNING: Are you absolutely sure you want to PERMANENTLY delete all active shipment and costing records from Firestore and local caches? This will clear the portal for fresh new entries.")) {
+                        const secondCheck = prompt("Security check: Type the word 'WIPE' to confirm deletion:");
+                        if (secondCheck === 'WIPE' || secondCheck === 'wipe') {
+                          const success = await wipeAllShipments();
+                          if (success) {
+                            alert("✅ Database successfully wiped clean. All shipments have been deleted.");
+                          } else {
+                            alert("❌ Error: Failed to wipe some database nodes. See server logs.");
+                          }
+                        } else {
+                          alert("Action cancelled. Security passphrase mismatched.");
+                        }
+                      }
+                    }}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-black shadow-sm flex items-center gap-2 transition-all ${
+                      isWritable
+                        ? 'bg-red-600 hover:bg-red-700 text-white cursor-pointer hover:shadow active:scale-95'
+                        : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-900 dark:border-slate-800'
+                    }`}
+                  >
+                    <Trash2 className="h-4 w-4" /> HAPUS SEMUA SHIPMENT
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>

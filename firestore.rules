@@ -54,7 +54,7 @@ service cloud.firestore {
       allow get, list, create, update, delete: if true;
     }
 
-    match /brandConfig/logo {
+    match /brandConfig/{configId} {
       allow get, create, update, delete: if true;
     }
   }

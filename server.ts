@@ -45,9 +45,21 @@ async function startServer() {
   const loadAllFromFirestore = async () => {
     console.log('Loading state from Firestore database...');
     try {
+      // Check if setup/seed has been completed before
+      const setupSnap = await getDoc(doc(db, 'brandConfig', 'setup'));
+      const isFirstSetup = !setupSnap.exists();
+
+      if (isFirstSetup) {
+        console.log('Performing first-time database seed...');
+        await setDoc(doc(db, 'brandConfig', 'setup'), {
+          initialized: true,
+          seededAt: new Date().toISOString()
+        });
+      }
+
       // 1. Load Shipments
       const shipmentsSnapshot = await getDocs(collection(db, 'shipments'));
-      if (shipmentsSnapshot.empty) {
+      if (shipmentsSnapshot.empty && isFirstSetup) {
         console.log('Firestore shipments empty. Initializing default dataset...');
         shipments = [...initialShipments];
         for (const s of shipments) {
@@ -64,7 +76,7 @@ async function startServer() {
 
       // 2. Load Activity Logs
       const logsSnapshot = await getDocs(collection(db, 'activityLogs'));
-      if (logsSnapshot.empty) {
+      if (logsSnapshot.empty && isFirstSetup) {
         console.log('Firestore logs empty. Initializing default dataset...');
         activityLogs = [...initialActivityLogs];
         for (const log of activityLogs) {
@@ -81,7 +93,7 @@ async function startServer() {
 
       // 3. Load Registered Users
       const usersSnapshot = await getDocs(collection(db, 'registeredUsers'));
-      if (usersSnapshot.empty) {
+      if (usersSnapshot.empty && isFirstSetup) {
         console.log('Firestore registered users empty. Initializing default dataset...');
         registeredUsers = [...defaultUsers];
         for (const u of registeredUsers) {
@@ -159,6 +171,42 @@ async function startServer() {
     } catch (err) {
       console.error('Error in sync-all API:', err);
       res.status(500).json({ error: 'Failed to sync with Firestore' });
+    }
+  });
+
+  // 2b. Wipe shipments endpoint
+  app.post('/api/state/wipe-shipments', async (req, res) => {
+    try {
+      console.log('Initiating wipe of all shipments...');
+      // 1. Delete all shipments in firestore
+      const shipmentsSnapshot = await getDocs(collection(db, 'shipments'));
+      for (const docSnap of shipmentsSnapshot.docs) {
+        await deleteDoc(doc(db, 'shipments', docSnap.id));
+      }
+      
+      // 2. Clear shipments memory list
+      shipments = [];
+      version = Date.now();
+      
+      // 3. Document this wipe in Activity Log
+      const rawUser = req.body?.user || {};
+      const newLog: ActivityLog = {
+        id: `LOG-${Date.now().toString().slice(-4)}`,
+        shipmentId: 'SYSTEM',
+        jobNo: 'WIPE-ALL',
+        username: rawUser.username || 'Admin',
+        role: rawUser.role || 'Director of Operation',
+        action: 'Wiped all operational shipment records from active database.',
+        timestamp: new Date().toISOString()
+      };
+      activityLogs = [newLog, ...activityLogs];
+      await setDoc(doc(db, 'activityLogs', newLog.id), newLog);
+
+      console.log('Successfully wiped all shipments from Firestore database.');
+      res.json({ success: true, version });
+    } catch (err) {
+      console.error('Error wiping shipments:', err);
+      res.status(500).json({ error: 'Failed to wipe shipments from database' });
     }
   });
 

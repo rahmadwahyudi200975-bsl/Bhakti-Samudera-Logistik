@@ -125,7 +125,13 @@ export default function DashboardView() {
       { key: '2026-03', label: 'Mar' },
       { key: '2026-04', label: 'Apr' },
       { key: '2026-05', label: 'May' },
-      { key: '2026-06', label: 'Jun' }
+      { key: '2026-06', label: 'Jun' },
+      { key: '2026-07', label: 'Jul' },
+      { key: '2026-08', label: 'Aug' },
+      { key: '2026-09', label: 'Sep' },
+      { key: '2026-10', label: 'Oct' },
+      { key: '2026-11', label: 'Nov' },
+      { key: '2026-12', label: 'Dec' }
     ];
 
     // Count actual shipments per month (YYYY-MM)
@@ -141,18 +147,9 @@ export default function DashboardView() {
 
     return predefinedMonths.map(m => {
       const actualCount = counts[m.key] || 0;
-      // Provide dynamic realistic data based on actual count or a natural default baseline
-      let displayCount = actualCount;
-      if (actualCount === 0) {
-        if (m.key === '2026-01') displayCount = 2;
-        if (m.key === '2026-02') displayCount = 3;
-        if (m.key === '2026-03') displayCount = 5;
-        if (m.key === '2026-04') displayCount = 4;
-        if (m.key === '2026-06') displayCount = 1;
-      }
       return {
         name: m.label,
-        'Shipments': displayCount
+        'Shipments': actualCount
       };
     });
   })();

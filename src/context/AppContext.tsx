@@ -33,6 +33,7 @@ interface AppContextType {
   updateUser: (id: string, email: string, fullName: string, role: UserRole, password?: string) => void;
   deleteUser: (id: string) => void;
   updateCompanyLogo: (logo: string | null) => void;
+  wipeAllShipments: () => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -378,6 +379,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const wipeAllShipments = async (): Promise<boolean> => {
+    setShipments([]);
+    try {
+      const res = await fetch('/api/state/wipe-shipments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user: {
+            username: currentUser.username,
+            role: currentUser.role
+          }
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentVersionRef.current = data.version;
+        await fetchServerState();
+        return true;
+      }
+    } catch (err) {
+      console.error('Error wiping shipments server-side', err);
+    }
+    return false;
+  };
+
   const approveShipment = async (id: string) => {
     setShipments(prev => prev.map(item => {
       if (item.id === id) {
@@ -631,7 +659,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         registerUser,
         updateUser,
         deleteUser,
-        updateCompanyLogo
+        updateCompanyLogo,
+        wipeAllShipments
       }}
     >
       {children}
