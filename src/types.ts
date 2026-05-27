@@ -116,6 +116,7 @@ export interface Shipment {
   documentChecklist?: DocumentChecklist; // Document Checklist
   attachments?: ShipmentAttachment[];  // Physical Uploaded Docs (PDF/JPG)
   status: CustomClearanceStatus;      // Clearance status
+  customsLane?: 'GREEN LANE' | 'YELLOW LANE' | 'RED LANE'; // Customs lane category
   estimatedCosts: CostBreakdown;      // Estimated funding budget
   actualCosts: CostBreakdown;         // Actual funding expenditures
   revenue: RevenueBreakdown;          // Service Revenue (Selling Price)

@@ -308,6 +308,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newId = `BSL-2026-${sequence}`;
     
     const newShipment: Shipment = {
+      customsLane: 'GREEN LANE',
       ...shipmentData,
       id: newId,
       createdAt: today,

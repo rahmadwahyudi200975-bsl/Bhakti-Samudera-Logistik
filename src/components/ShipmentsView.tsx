@@ -53,6 +53,7 @@ export default function ShipmentsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [containerFilter, setContainerFilter] = useState<string>('all');
+  const [customsLaneFilter, setCustomsLaneFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('eta-asc');
 
   // MODAL / DIALOG WORKFLOW STATES
@@ -218,6 +219,7 @@ export default function ShipmentsView() {
   const [formContainerSize, setFormContainerSize] = useState<ContainerSize>('20ft');
   const [formContainerQty, setFormContainerQty] = useState(1);
   const [formStatus, setFormStatus] = useState<CustomClearanceStatus>('Draft');
+  const [formCustomsLane, setFormCustomsLane] = useState<'GREEN LANE' | 'YELLOW LANE' | 'RED LANE'>('GREEN LANE');
   const [formNotes, setFormNotes] = useState('');
   const [formPortOfDischarge, setFormPortOfDischarge] = useState('');
 
@@ -283,6 +285,7 @@ export default function ShipmentsView() {
     setFormContainerSize('20ft');
     setFormContainerQty(1);
     setFormStatus('Draft');
+    setFormCustomsLane('GREEN LANE');
     setFormNotes('');
 
     // Generate a default valid ISO 6346 compliant container number as placeholder
@@ -332,6 +335,7 @@ export default function ShipmentsView() {
     setFormContainerSize(s.containerSize);
     setFormContainerQty(s.containerQty);
     setFormStatus(s.status);
+    setFormCustomsLane(s.customsLane || 'GREEN LANE');
     setFormNotes(s.notes);
     setFormPortOfDischarge(s.portOfDischarge || '');
 
@@ -442,6 +446,7 @@ export default function ShipmentsView() {
         containerQty: Number(formContainerQty),
         portOfDischarge: formPortOfDischarge,
         status: formStatus,
+        customsLane: formCustomsLane,
         notes: formNotes,
         estimatedCosts,
         revenue,
@@ -474,6 +479,7 @@ export default function ShipmentsView() {
         containerQty: Number(formContainerQty),
         portOfDischarge: formPortOfDischarge,
         status: formStatus,
+        customsLane: formCustomsLane,
         notes: formNotes,
         estimatedCosts,
         actualCosts: {
@@ -515,7 +521,8 @@ export default function ShipmentsView() {
     const matchesSearch = searchString.includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     const matchesContainer = containerFilter === 'all' || s.containerSize === containerFilter;
-    return matchesSearch && matchesStatus && matchesContainer;
+    const matchesCustomsLane = customsLaneFilter === 'all' || s.customsLane === customsLaneFilter;
+    return matchesSearch && matchesStatus && matchesContainer && matchesCustomsLane;
   }).sort((a, b) => {
     switch (sortBy) {
       case 'id-desc':
@@ -646,6 +653,22 @@ export default function ShipmentsView() {
             </select>
           </div>
 
+          {/* Customs Lane filter drop */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter Customs Lane</label>
+            <select
+              id="shipments-lane-filter"
+              value={customsLaneFilter}
+              onChange={(e) => setCustomsLaneFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-705 outline-none dark:border-slate-700 dark:bg-slate-805 dark:text-slate-300"
+            >
+              <option value="all">All Customs Lanes</option>
+              <option value="GREEN LANE">🟢 GREEN LANE</option>
+              <option value="YELLOW LANE">🟡 YELLOW LANE</option>
+              <option value="RED LANE">🔴 RED LANE</option>
+            </select>
+          </div>
+
           {/* Commodity Shortcut Tags (Dynamic Quick Filters) */}
           <div className="flex items-end sm:col-span-2">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -685,6 +708,7 @@ export default function ShipmentsView() {
                 <th className="px-5 py-4 min-w-[110px]">Container Info</th>
                 <th className="px-5 py-4 min-w-[145px]">Port of Discharge</th>
                 <th className="px-5 py-4 min-w-[125px]">ETA & B/L & PIB</th>
+                <th className="px-5 py-4 min-w-[135px]">Customs Lane</th>
                 <th className="px-5 py-4 min-w-[150px]">Clearance Status</th>
                 <th className="px-5 py-4 min-w-[130px]">Funding Estimate</th>
                 <th className="px-5 py-4 text-center min-w-[160px]">Actions & Steps</th>
@@ -808,6 +832,35 @@ export default function ShipmentsView() {
                           </div>
                         </td>
 
+                        {/* CUSTOMS LANE BADGE */}
+                        <td className="px-5 py-4">
+                          {(() => {
+                            const lane = s.customsLane || 'GREEN LANE';
+                            if (lane === 'RED LANE') {
+                              return (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[11px] font-extrabold text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/20 dark:text-rose-400">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse"></span>
+                                  RED LANE
+                                </span>
+                              );
+                            } else if (lane === 'YELLOW LANE') {
+                              return (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold text-amber-700 dark:border-amber-905/30 dark:bg-amber-950/20 dark:text-amber-400">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                  YELLOW LANE
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-205 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-400">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                  GREEN LANE
+                                </span>
+                              );
+                            }
+                          })()}
+                        </td>
+
                         {/* CLEARANCE STATUS & CHECKLIST COUNT */}
                         <td className="px-5 py-4">
                           <div className="flex flex-col gap-1">
@@ -914,7 +967,7 @@ export default function ShipmentsView() {
                       {/* EXPANDED ACCORDION: STATUS TIMELINE HISTORY + INTERACTIVE DOCUMENT CHECKLIST + ATTACHMENTS */}
                       {isExpanded && (
                         <tr className="bg-slate-50/50 dark:bg-slate-900/[0.25]">
-                          <td colSpan={8} className="px-6 py-5 border-b border-slate-150 dark:border-slate-800">
+                          <td colSpan={9} className="px-6 py-5 border-b border-slate-150 dark:border-slate-800">
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-slate-705 dark:text-slate-300">
                               
                               {/* MODULE 1: CLEARANCE TIMELINE HISTORY (5 Columns) */}
@@ -1386,6 +1439,19 @@ export default function ShipmentsView() {
                         <option key={s} value={s}>{s}</option>
                       ))}
                       <option value="Cancelled">❌ Cancelled / Abandoned</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Customs Lane Category</label>
+                    <select
+                      value={formCustomsLane}
+                      onChange={(e) => setFormCustomsLane(e.target.value as 'GREEN LANE' | 'YELLOW LANE' | 'RED LANE')}
+                      className="w-full rounded-xl border border-slate-205 bg-white p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805 text-slate-700 dark:text-slate-300 font-bold"
+                    >
+                      <option value="GREEN LANE">🟢 GREEN LANE</option>
+                      <option value="YELLOW LANE">🟡 YELLOW LANE</option>
+                      <option value="RED LANE">🔴 RED LANE</option>
                     </select>
                   </div>
 
