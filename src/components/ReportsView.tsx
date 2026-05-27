@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   ShieldCheck
 } from 'lucide-react';
+import CompanyLogo from './CompanyLogo';
 
 export default function ReportsView() {
   const { shipments } = useApp();
@@ -38,9 +39,9 @@ export default function ReportsView() {
 
   const getMonthName = (monthValue: string) => {
     const names: Record<string, string> = {
-      '01': 'Januari', '02': 'Februari', '03': 'Maret', '04': 'April',
-      '05': 'Mei', '06': 'Juni', '07': 'Juli', '08': 'Agustus',
-      '09': 'September', '10': 'Oktober', '11': 'November', '12': 'Desember'
+      '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+      '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+      '09': 'September', '10': 'October', '11': 'November', '12': 'December'
     };
     return names[monthValue] || monthValue;
   };
@@ -213,7 +214,7 @@ export default function ReportsView() {
               Weekly Report
             </button>
             <button
-              id="report-tab-monthly"
+               id="report-tab-monthly"
               onClick={() => setReportType('monthly')}
               className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
                 reportType === 'monthly'
@@ -221,7 +222,7 @@ export default function ReportsView() {
                   : 'text-slate-550 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300'
               }`}
             >
-              Laporan Bulanan (Monthly)
+              Monthly Report
             </button>
             <button
               id="report-tab-yearly"
@@ -301,28 +302,28 @@ export default function ReportsView() {
           {reportType === 'monthly' && (
             <>
               <div className="flex flex-col gap-1 w-full sm:w-auto">
-                <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest">Pilih Bulan</label>
+                <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest">Select Month</label>
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   className="rounded-xl border border-slate-200 bg-slate-50 p-2 outline-none dark:border-slate-800 dark:bg-slate-800 text-slate-705 dark:text-white font-bold"
                 >
-                  <option value="01">Januari (01)</option>
-                  <option value="02">Februari (02)</option>
-                  <option value="03">Maret (03)</option>
+                  <option value="01">January (01)</option>
+                  <option value="02">February (02)</option>
+                  <option value="03">March (03)</option>
                   <option value="04">April (04)</option>
-                  <option value="05">Mei (05)</option>
-                  <option value="06">Juni (06)</option>
-                  <option value="07">Juli (07)</option>
-                  <option value="08">Agustus (08)</option>
+                  <option value="05">May (05)</option>
+                  <option value="06">June (06)</option>
+                  <option value="07">July (07)</option>
+                  <option value="08">August (08)</option>
                   <option value="09">September (09)</option>
-                  <option value="10">Oktober (10)</option>
+                  <option value="10">October (10)</option>
                   <option value="11">November (11)</option>
-                  <option value="12">Desember (12)</option>
+                  <option value="12">December (12)</option>
                 </select>
               </div>
               <div className="flex flex-col gap-1 w-full sm:w-auto">
-                <label className="text-[10px] font-bold text-slate-455 uppercase tracking-widest">Tahun</label>
+                <label className="text-[10px] font-bold text-slate-455 uppercase tracking-widest">Year</label>
                 <select
                   value={selectedMonthYear}
                   onChange={(e) => setSelectedMonthYear(e.target.value)}
@@ -362,8 +363,8 @@ export default function ReportsView() {
         {/* Report Header Logos & Meta stamp */}
         <div className="flex items-start justify-between border-b pb-6 dark:border-slate-800">
           <div className="flex gap-4">
-            <div className="h-14 w-14 rounded-xl bg-blue-900 text-white flex items-center justify-center">
-              <Ship className="h-8 w-8" />
+            <div className="h-14 w-14 rounded-xl bg-slate-100 border border-slate-200/80 text-white flex items-center justify-center shrink-0 dark:bg-slate-800 dark:border-slate-700">
+              <CompanyLogo className="h-12 w-12" />
             </div>
             <div>
               <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-105 uppercase tracking-wide">
@@ -396,7 +397,7 @@ export default function ReportsView() {
           <h2 className="text-lg font-extrabold text-blue-900 uppercase dark:text-white select-none font-sans">
             {reportType === 'daily' && `Daily Import Ledger Recap (${selectedDate})`}
             {reportType === 'weekly' && `Periodic Weekly Import Ledger (${startDate} to ${endDate})`}
-            {reportType === 'monthly' && `Rekap Laporan Bulanan (${getMonthName(selectedMonth).toUpperCase()} ${selectedMonthYear})`}
+            {reportType === 'monthly' && `Monthly Import Recap Ledger (${getMonthName(selectedMonth).toUpperCase()} ${selectedMonthYear})`}
             {reportType === 'yearly' && `Yearly Import Fiscal Report ${selectedYear}`}
           </h2>
           <span className="text-xs text-slate-405 mt-1 block">
@@ -410,7 +411,7 @@ export default function ReportsView() {
           <div className="text-center md:border-r border-slate-200 dark:border-slate-800 py-1">
             <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Total Shipment</span>
             <span className="text-lg font-black text-slate-900 mt-1 block dark:text-white">
-              {periodShipments.length} Shipment
+              {periodShipments.length} {periodShipments.length === 1 ? 'Shipment' : 'Shipments'}
             </span>
             <span className="text-[10px] text-slate-400 font-semibold font-mono block mt-0.5">
               ({volumeTeus} TEUs Volume)
@@ -427,22 +428,22 @@ export default function ReportsView() {
             </span>
           </div>
 
-          <div className="text-center md:border-r border-slate-200 dark:border-slate-800 py-1 font-mono">
+          <div className="text-center  md:border-r border-slate-200 dark:border-slate-800 py-1 font-mono">
             <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block font-sans">Total Cost</span>
             <span className="text-lg font-black text-rose-600 dark:text-rose-455 mt-1 block">
               {formatRupiah(totalDisbursedPeriod)}
             </span>
-            <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold uppercase tracking-wider block mt-0.5">
-              Talangan / Advances
+            <span className="text-[10px] text-slate-455 dark:text-slate-500 font-semibold uppercase tracking-wider block mt-0.5">
+              Advances / Outlays
             </span>
           </div>
 
           <div className="text-center py-1 font-mono">
-            <span className="text-[10px] font-extrabold text-emerald-650 dark:text-emerald-400 uppercase tracking-wider block font-sans">Total Profit Bersih</span>
+            <span className="text-[10px] font-extrabold text-emerald-650 dark:text-emerald-400 uppercase tracking-wider block font-sans">Net Service Profits</span>
             <span className="text-lg font-black text-emerald-600 mt-1 block dark:text-emerald-400">
               {formatRupiah(totalProfitPeriod)}
             </span>
-            <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold uppercase tracking-wider block mt-0.5">
+            <span className="text-[10px] text-slate-455 dark:text-slate-500 font-semibold uppercase tracking-wider block mt-0.5">
               Net Service Profits
             </span>
           </div>
@@ -463,7 +464,7 @@ export default function ReportsView() {
                 </span>
               </div>
               <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                Audit sinkronisasi berhasil. Selisih aritmatika antara piutang penagihan (Billing), penyaluran advanced talangan, dan Net Brokerage Margins tercatat <b className="text-emerald-600 dark:text-emerald-450 font-bold">Rp 0 (Sempurna)</b> terhadap database pusat.
+                Synchronization audit successful. Arithmetic difference between customer billings, advanced disbursements, and Net Brokerage Margins is Rp 0 (Perfect discrepancy match) against the central database.
               </p>
             </div>
           </div>
@@ -481,7 +482,7 @@ export default function ReportsView() {
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-extrabold text-blue-900 uppercase tracking-widest dark:text-sky-400 flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse"></span>
-                Analisis Tren Perbandingan Tahunan (Year-over-Year / YoY)
+                Year-over-Year (YoY) Annual Trend Analysis
               </h4>
               <span className="text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2.5 py-1 rounded-lg font-bold font-mono">
                 {prevYearStr} vs {selectedYear}
@@ -520,7 +521,7 @@ export default function ReportsView() {
 
               {/* 2. YoY Volume */}
               <div className="bg-slate-50/50 dark:bg-slate-850 p-3 rounded-xl border border-slate-200 dark:border-slate-800/60 flex flex-col justify-between space-y-1">
-                <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Volume Kontainer</span>
+                <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Container Volume</span>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-[10.5px] text-slate-500 font-mono">{prevYearStr}: <b className="text-slate-700 dark:text-slate-350">{prevVolumeTeus} TEUs</b></span>
                   <span className="text-[10.5px] text-slate-500 font-mono">{selectedYear}: <b className="text-slate-700 dark:text-slate-350">{volumeTeus} TEUs</b></span>
@@ -576,7 +577,7 @@ export default function ReportsView() {
 
               {/* 4. YoY Cost */}
               <div className="bg-slate-50/50 dark:bg-slate-850 p-3 rounded-xl border border-slate-200 dark:border-slate-800/60 flex flex-col justify-between space-y-1">
-                <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Biaya Dana Talangan</span>
+                <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Advanced Outlays Cost</span>
                 <div className="flex flex-col text-[10px] text-slate-500 font-mono mt-1 space-y-0.5">
                   <span className="truncate">{prevYearStr}: {formatRupiah(prevTotalDisbursed)}</span>
                   <span className="truncate">{selectedYear}: {formatRupiah(totalDisbursedPeriod)}</span>
@@ -604,7 +605,7 @@ export default function ReportsView() {
 
               {/* 5. YoY Profit */}
               <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-emerald-905/20 dark:to-teal-905/15 p-3 rounded-xl border border-emerald-150 dark:border-emerald-900/60 flex flex-col justify-between space-y-1">
-                <span className="text-[9.5px] font-black text-emerald-700 dark:text-emerald-450 uppercase tracking-wider block">Profit Bersih (Net)</span>
+                <span className="text-[9.5px] font-black text-emerald-700 dark:text-emerald-450 uppercase tracking-wider block">Net Service Profits</span>
                 <div className="flex flex-col text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-1 space-y-0.5">
                   <span className="truncate">{prevYearStr}: {formatRupiah(prevTotalProfit)}</span>
                   <span className="truncate font-bold">{selectedYear}: {formatRupiah(totalProfitPeriod)}</span>

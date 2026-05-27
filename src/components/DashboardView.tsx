@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import AdminSettingsDesk from './AdminSettingsDesk';
 import { 
   getSumOfCosts, 
   getShipmentTotalRevenue, 
@@ -38,7 +39,8 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell 
+  Cell,
+  LabelList
 } from 'recharts';
 import { CustomClearanceStatus } from '../types';
 
@@ -119,12 +121,12 @@ export default function DashboardView() {
   // 3. COMPILE DATA FOR MONTHLY SHIPMENTS (BAR CHART)
   const monthlyShipmentData = (() => {
     const predefinedMonths = [
-      { key: '2026-01', label: 'January' },
-      { key: '2026-02', label: 'February' },
-      { key: '2026-03', label: 'March' },
-      { key: '2026-04', label: 'April' },
+      { key: '2026-01', label: 'Jan' },
+      { key: '2026-02', label: 'Feb' },
+      { key: '2026-03', label: 'Mar' },
+      { key: '2026-04', label: 'Apr' },
       { key: '2026-05', label: 'May' },
-      { key: '2026-06', label: 'June' }
+      { key: '2026-06', label: 'Jun' }
     ];
 
     // Count actual shipments per month (YYYY-MM)
@@ -374,7 +376,7 @@ export default function DashboardView() {
             {/* Staff Card 1: Document Review Status */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-widest">Draft & DokCek</span>
+                <span className="text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-widest">Draft & Doc Checklist</span>
                 <div className="rounded-xl bg-amber-100 p-2.5 text-amber-600 dark:bg-amber-955/50 dark:text-amber-400">
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
@@ -384,18 +386,18 @@ export default function DashboardView() {
                   {documentReviewCount}
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-1">
-                  Menunggu Kelengkapan Dokumen Staf
+                  Awaiting Document Compositions
                 </span>
               </div>
               <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 leading-normal border-t border-slate-100 dark:border-slate-800 pt-3">
-                Kargo dalam tahap pemeriksaan B/L, Invoice, dan Packing List.
+                Cargo is in target B/L, Commercial Invoice, and Packing List audit.
               </div>
             </div>
 
             {/* Staff Card 2: Customs PIB Clearance Stage */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-widest">Proses Bea Cukai</span>
+                <span className="text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-widest">Customs Clearance Stage</span>
                 <div className="rounded-xl bg-rose-105 bg-rose-50 text-rose-600 dark:bg-rose-955/30 dark:text-rose-400">
                   <Layers className="h-5 w-5" />
                 </div>
@@ -405,18 +407,18 @@ export default function DashboardView() {
                   {customsPendingCount}
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-1">
-                  PIB, Billing, SSPCP, & Behandle Bandara
+                  PIB, Billing, SSPCP, & Port Inspections
                 </span>
               </div>
               <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 leading-normal border-t border-slate-100 dark:border-slate-800 pt-3 font-semibold text-blue-600 dark:text-blue-400">
-                Pemeriksaan fisik aktif & pengesahan PIB Bea Cukai Pelabuhan.
+                Active container inspections & port customs PIB verification.
               </div>
             </div>
 
             {/* Staff Card 3: Logistics dispatch & ready for trucking */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-widest">Sirkulasi Delivery</span>
+                <span className="text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-widest">Delivery Circulation</span>
                 <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-600 dark:bg-emerald-955/50 dark:text-emerald-400">
                   <Truck className="h-5 w-5" />
                 </div>
@@ -426,11 +428,11 @@ export default function DashboardView() {
                   {truckingDeliveryCount}
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-1">
-                  SPPB Terbit & Proses Gate Out Pelabuhan
+                  SPPB Released & Port Gate Out Status
                 </span>
               </div>
               <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 leading-normal border-t border-slate-100 dark:border-slate-800 pt-3">
-                Kargo siap diangkut truk pengiriman ke gudang importir.
+                Cargo is ready for truck dispatch to the importer's warehouse.
               </div>
             </div>
           </>
@@ -467,7 +469,9 @@ export default function DashboardView() {
                   contentStyle={{ backgroundColor: '#1E293B', color: '#fff', borderRadius: '12px', border: 'none' }}
                 />
                 <Legend />
-                <Bar dataKey="Shipments" fill="#005696" radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="Shipments" fill="#005696" radius={[4, 4, 0, 0]} barSize={40}>
+                  <LabelList dataKey="Shipments" position="inside" fill="#ffffff" style={{ fontWeight: 'bold', fontSize: '11px' }} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -538,6 +542,9 @@ export default function DashboardView() {
         </div>
 
       </div>
+
+      {/* Corporate Admin Branding & Access Control Desk */}
+      <AdminSettingsDesk />
 
     </div>
   );

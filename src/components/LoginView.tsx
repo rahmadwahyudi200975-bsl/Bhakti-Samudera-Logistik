@@ -31,9 +31,10 @@ import {
   ChevronRight,
   Activity
 } from 'lucide-react';
+import CompanyLogo from './CompanyLogo';
 
 export default function LoginView() {
-  const { login, resetPassword } = useApp();
+  const { login, resetPassword, registeredUsers } = useApp();
   const [rememberMe, setRememberMe] = useState(() => {
     try {
       return localStorage.getItem('bsl_remember_me') === 'true';
@@ -45,7 +46,7 @@ export default function LoginView() {
   const [selectedRole, setSelectedRole] = useState<UserRole>(() => {
     try {
       const saved = localStorage.getItem('bsl_remembered_role');
-      if (saved === 'Director' || saved === 'Staff') {
+      if (saved) {
         return saved as UserRole;
       }
     } catch {}
@@ -97,34 +98,36 @@ export default function LoginView() {
       if (!trimmedEmail || !trimmedEmail.includes('@')) {
         setError({
           type: 'email',
-          message: 'Format Email salah! Alamat email harus memiliki karakter "@" (contoh: user@bsl.co.id).'
+          message: 'Invalid Email format! The email address must contain "@" (e.g., user@bsl.co.id).'
         });
         return;
       }
 
-      // 2. Check if email belongs to the selected role
-      if (selectedRole === 'Director' && trimmedEmail.toLowerCase() !== 'director@bsl.co.id') {
+      // 2. Validate email is in the registered users roster
+      const matchedUser = registeredUsers.find(u => u.email.toLowerCase() === trimmedEmail.toLowerCase());
+      if (!matchedUser) {
         setError({
           type: 'email',
-          message: `E-mail salah untuk peran ini! Akun ${selectedRole} didaftarkan dengan email "director@bsl.co.id".`
+          message: `Email is not registered! Please ask a BSL administrator to register your account.`
         });
         return;
       }
 
-      if (selectedRole === 'Staff' && trimmedEmail.toLowerCase() !== 'staff.ops@bsl.co.id') {
+      // 3. Make sure selected role matches the registered role
+      if (matchedUser.role !== selectedRole) {
         setError({
           type: 'email',
-          message: `E-mail salah untuk peran ini! Akun ${selectedRole} didaftarkan dengan email "staff.ops@bsl.co.id".`
+          message: `Role mismatch! This account is registered with the role "${matchedUser.role}", not "${selectedRole}".`
         });
         return;
       }
 
-      // 3. Verify internal password
-      const success = login(selectedRole, password);
+      // 4. Verify password
+      const success = login(trimmedEmail, password);
       if (!success) {
         setError({
           type: 'password',
-          message: 'Kata sandi salah! Sandi yang Anda masukkan tidak cocok dengan database BSL.'
+          message: 'Incorrect password! The password you entered does not match the BSL credentials database.'
         });
       } else {
         // If login was successful and rememberMe is checked, save credentials
@@ -169,8 +172,8 @@ export default function LoginView() {
 
         {/* Header Branding */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-600 shadow-md shadow-blue-500/30">
-            <Anchor className="h-5 w-5 text-white" />
+          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/10 border border-white/10 shadow-md">
+            <CompanyLogo className="h-8.5 w-8.5" />
           </div>
           <div>
             <span className="font-extrabold text-sm tracking-wider uppercase block text-white">
@@ -186,15 +189,15 @@ export default function LoginView() {
         <div className="relative z-10 my-auto pr-4 space-y-8">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide">
-              <Sparkles className="h-3 w-3 animate-spin duration-3000" />
-              Sistem Manajemen Cerdas
+              <Sparkles className="h-3 w-3 animate-spin" />
+              Smart Management System
             </div>
             <h2 className="text-3xl font-extrabold tracking-tight leading-tight text-white">
-              Satu Portal Utama <br />
-              <span className="text-blue-450 bg-gradient-to-r from-blue-400 to-teal-300 bg-clip-text text-transparent">Urusan Kepabeanan & Kas</span>
+              One Unified Portal <br />
+              <span className="text-blue-450 bg-gradient-to-r from-blue-400 to-teal-300 bg-clip-text text-transparent">Customs & Cash Management</span>
             </h2>
             <p className="text-sm text-slate-400 leading-relaxed font-sans">
-              Pantau status PIB, rilis dokumen SPPB, perhitungan demurrage kontainer, dan analitik arus kas operasional Anda secara real-time.
+              Monitor PIB status, release SPPB documents, calculate container demurrage, and analyze operational cash flows in real-time.
             </p>
           </div>
 
@@ -205,18 +208,18 @@ export default function LoginView() {
                 <ShieldCheck className="h-4.5 w-4.5 text-blue-400" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-200">Keamanan Akses Tingkat Tinggi (Local Storage)</h4>
-                <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">Enkripsi sesi klien yang menjamin integrasi data direktur dan staf di browser lokal Anda secara aman.</p>
+                <h4 className="text-xs font-bold text-slate-200">High-Level Access Security (Local Storage)</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">Client sessions are safely encrypted, protecting Director and Staff operational data within your local browser.</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3 bg-slate-800/40 border border-slate-800 p-3 rounded-2xl">
               <div className="h-8 w-8 shrink-0 rounded-lg bg-teal-600/10 flex items-center justify-center border border-teal-500/10 mt-0.5">
-                <Activity className="h-4.5 w-4.5 text-teal-400" />
+                <Activity className="h-4.5 w-4.5 text-teal-405" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-200">Validasi Check-Sum ISO 6346 Otomatis</h4>
-                <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">Sistem secara cerdas mendeteksi kesalahan ketik pada 11 karakter nomor kontainer kontainer lapangan Anda.</p>
+                <h4 className="text-xs font-bold text-slate-200">Automatic ISO 6346 Checksum Validation</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-normal">The system intelligently detects typos in your 11-character container numbers automatically.</p>
               </div>
             </div>
           </div>
@@ -240,8 +243,8 @@ export default function LoginView() {
           
           {/* Mobile Display Header (visible on screens under md) */}
           <div className="text-center md:hidden mb-6">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 mb-3">
-              <Anchor className="h-6 w-6" />
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 border border-slate-200/60 dark:bg-slate-800 dark:border-slate-700 shadow-md mb-3">
+              <CompanyLogo className="h-10 w-10" />
             </div>
             <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
               BHAKTI SAMUDERA
@@ -260,67 +263,53 @@ export default function LoginView() {
             {/* Greeting */}
             <div className="mb-6">
               <h2 className="text-lg font-bold text-slate-850 dark:text-slate-100">
-                Masuk ke Portal BSL
+                Sign in to BSL Portal
               </h2>
               <p className="text-xs text-slate-400 dark:text-slate-400 mt-1 leading-normal">
-                Silakan pilih jenis peran akses operasional Anda dan masukkan kata sandi Anda.
+                Please select your operational access role and enter your password.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               
-              {/* Modern Segmented Role Switcher Tabs */}
+              {/* Modern Segmented Role Switcher Dropdown */}
               <div>
                 <label className="block text-[11px] font-extrabold text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-wider">
                   Select Access Role
                 </label>
-                <div className="grid grid-cols-2 p-1 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-150/50 dark:border-slate-800" id="login-role-selector">
-                  
-                  {/* Director Tab Option */}
-                  <button
-                    id="login-role-btn-director"
-                    type="button"
-                    onClick={() => {
-                      setSelectedRole('Director');
-                      setEmail('director@bsl.co.id');
+                <div className="flex flex-col gap-1.5" id="login-role-selector">
+                  <select
+                    id="login-role-select"
+                    value={selectedRole}
+                    onChange={(e) => {
+                      const r = e.target.value as UserRole;
+                      setSelectedRole(r);
                       setError(null);
+                      
+                      // Auto-set standard email for quick demo convenience
+                      if (r === 'President Director') setEmail('president@bsl.co.id');
+                      else if (r === 'Director of Operation') setEmail('ops.dir@bsl.co.id');
+                      else if (r === 'Director of Finance') setEmail('fin.dir@bsl.co.id');
+                      else if (r === 'Finance Staff') setEmail('finance.staff@bsl.co.id');
+                      else if (r === 'Operation Staff') setEmail('operation.staff@bsl.co.id');
+                      else if (r === 'Director') setEmail('director@bsl.co.id');
+                      else if (r === 'Staff') setEmail('staff.ops@bsl.co.id');
                     }}
-                    className={`relative py-3 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all outline-none ${
-                      selectedRole === 'Director'
-                        ? 'bg-white text-blue-600 dark:bg-slate-800 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-700/60'
-                        : 'text-slate-505 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
+                    className="w-full rounded-2xl border border-slate-200 bg-white dark:bg-slate-850 dark:border-slate-800 py-3 px-3.5 text-xs outline-none text-slate-850 dark:text-slate-100 font-bold shadow-soft-xs focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all cursor-pointer"
                   >
-                    <ShieldCheck className={`h-4 w-4 ${selectedRole === 'Director' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-405'}`} />
-                    <span>Director</span>
-                  </button>
-
-                  {/* Staff Ops Tab Option */}
-                  <button
-                    id="login-role-btn-staff"
-                    type="button"
-                    onClick={() => {
-                      setSelectedRole('Staff');
-                      setEmail('staff.ops@bsl.co.id');
-                      setError(null);
-                    }}
-                    className={`relative py-3 px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all outline-none ${
-                      selectedRole === 'Staff'
-                        ? 'bg-white text-blue-600 dark:bg-slate-800 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-700/60'
-                        : 'text-slate-550 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    <KeyRound className={`h-4 w-4 ${selectedRole === 'Staff' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-450'}`} />
-                    <span>Staff Ops</span>
-                  </button>
-
+                    <option value="President Director">👑 President Director</option>
+                    <option value="Director of Operation">⚙️ Director of Operation</option>
+                    <option value="Director of Finance">💼 Director of Finance</option>
+                    <option value="Finance Staff">💳 Finance Staff</option>
+                    <option value="Operation Staff">⚓ Operation Staff</option>
+                    <option value="Director">🛡️ Director (Legacy)</option>
+                    <option value="Staff">🔑 Staff Ops (Legacy)</option>
+                  </select>
                 </div>
-              </div>
-
-              {/* Email/Username input section */}
+              </div>              {/* Email/Username input section */}
               <div>
                 <label htmlFor="login-email-input" className="block text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">
-                  EMAIL AKSES PORTAL
+                  PORTAL ACCESS EMAIL
                 </label>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
@@ -345,7 +334,7 @@ export default function LoginView() {
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label htmlFor="login-password-input" className="block text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                    SANDI AKSES
+                    ACCESS PASSWORD
                   </label>
                 </div>
 
@@ -359,7 +348,7 @@ export default function LoginView() {
                     id="login-password-input"
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder={selectedRole === 'Director' ? 'Contoh: director123' : 'Contoh: staff123'}
+                    placeholder={selectedRole === 'Director' ? 'e.g. director123' : 'e.g. staff123'}
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
@@ -374,7 +363,7 @@ export default function LoginView() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none"
-                    title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
                   </button>
@@ -390,7 +379,7 @@ export default function LoginView() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="rounded border-slate-300 dark:border-slate-700 h-4.5 w-4.5 bg-slate-50 dark:bg-slate-850 text-blue-600 focus:ring-blue-500/20 focus:ring-4 transition-all"
                     />
-                    <span>Ingat Saya</span>
+                    <span>Remember Me</span>
                   </label>
                   
                   <button
@@ -411,14 +400,14 @@ export default function LoginView() {
                     }}
                     className="text-[11px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline outline-none cursor-pointer"
                   >
-                    Lupa sandi?
+                    Forgot password?
                   </button>
                 </div>
 
                 {/* Secure Session Info indicator */}
                 <div className="flex items-center gap-1.5 mt-2.5 px-1.5 text-[10px] text-slate-400 dark:text-slate-500 italic font-medium leading-normal">
                   <Clock className="h-3.5 w-3.5 text-slate-400/80 shrink-0" />
-                  <span>Sesi masuk dilindungi standar enkripsi local-storage demi privasi dan keamanan data Anda.</span>
+                  <span>Session access is protected under secure encryption of local-storage standards for privacy and data safety.</span>
                 </div>
               </div>
 
@@ -440,13 +429,13 @@ export default function LoginView() {
                       <div className="space-y-1 flex-1">
                         <div className="flex items-center justify-between">
                           <h4 className="font-bold text-xs tracking-wider uppercase text-rose-700 dark:text-rose-300">
-                            Masuk Gagal: {error.type === 'email' ? 'Email Salah/Tidak Terdaftar' : 'Kata Sandi Salah'}
+                            Login Failed: {error.type === 'email' ? 'Incorrect Email' : 'Incorrect Password'}
                           </h4>
                           <button
                             type="button"
                             onClick={() => setError(null)}
                             className="text-rose-400 hover:text-rose-600 dark:hover:text-rose-300"
-                            title="Tutup Notifikasi"
+                            title="Close notification"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -455,11 +444,6 @@ export default function LoginView() {
                           {error.message}
                         </p>
                       </div>
-                    </div>
-                    
-                    {/* Helper guide inside alert */}
-                    <div className="text-[10.5px] bg-white/70 dark:bg-slate-900/40 p-2.5 rounded-xl border border-rose-100 dark:border-rose-950/25 text-slate-500 dark:text-slate-400 leading-normal font-medium">
-                      <span className="font-bold text-rose-600 dark:text-rose-450">💡 Tips untuk Anda:</span> Silakan klik tombol di bawah kolom ini pada panel <strong className="text-slate-700 dark:text-slate-200">"Bantuan Uji Coba Demo (Autofill)"</strong> agar sistem langsung mengisi e-mail dan sandi yang benar secara instan.
                     </div>
                   </motion.div>
                 )}
@@ -475,74 +459,23 @@ export default function LoginView() {
                 {isSubmitting ? (
                   <span className="flex items-center gap-1.5 animate-pulse">
                     <span className="h-2 w-2 rounded-full bg-white block animate-ping" />
-                    Memverifikasi Sandi...
+                    Checking Password...
                   </span>
                 ) : (
-                  'Masuk ke Dasbor'
+                  'Sign In to Dashboard'
                 )}
               </button>
 
             </form>
 
-            {/* DEMO ONBOARDING QUICK PILOTS (Autofills credentials smoothly to guarantee new user comfort) */}
-            <div className="mt-6 pt-5 border-t border-slate-150 dark:border-slate-800">
-              <div className="flex items-center gap-1.5 mb-3">
-                <Lightbulb className="h-4 w-4 text-amber-500 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Bantuan Uji Coba Demo (Autofill)
-                </span>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-[10.5px] text-slate-405 leading-normal">
-                  Sebagai pengguna baru, Anda tidak perlu mengetik sandi manual. Cukup klik pil helper di bawah ini untuk mengisi sandi otomatis secara instan:
-                </p>
 
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleAutofill('Director', 'director123')}
-                    className="flex flex-col text-left py-2 px-3 rounded-xl border border-slate-150 hover:bg-slate-50 hover:border-blue-300 dark:border-slate-800 dark:hover:bg-slate-850/60 dark:hover:border-slate-700 transition-all select-none"
-                    title="Autofill Director Password"
-                  >
-                    <span className="text-[9px] font-extrabold text-slate-400 uppercase">Director</span>
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 mt-0.5">director123</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleAutofill('Staff', 'staff123')}
-                    className="flex flex-col text-left py-2 px-3 rounded-xl border border-slate-150 hover:bg-slate-50 hover:border-blue-300 dark:border-slate-800 dark:hover:bg-slate-850/60 dark:hover:border-slate-700 transition-all select-none"
-                    title="Autofill Staff Ops Password"
-                  >
-                    <span className="text-[9px] font-extrabold text-slate-400 uppercase">Staff Ops</span>
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 mt-0.5">staff123</span>
-                  </button>
-                </div>
-
-                {/* Success alert of autofilling */}
-                <AnimatePresence>
-                  {showAutofillSuccess && (
-                    <motion.p 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="text-[10px] font-extrabold text-emerald-600 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/10 mt-2"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      Sandi akses {showAutofillSuccess} berhasil disalin ke kolom sandi!
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
 
           </motion.div>
 
           {/* Secure disclaimer in center column layout */}
           <div className="text-center text-[10.5px] text-slate-400 dark:text-slate-550 font-medium">
-            Sistem pengaman cloud menggunakan enkripsi local-storage sandi. <br />
-            Semisalkan lupa sandi default, anda dapat melakukan reset simulasi.
+            Cloud security system utilizes securely encrypted password local-storage. <br />
+            Should you forget default credentials, you can simulate a safe OTP reset.
           </div>
 
         </div>
@@ -563,7 +496,7 @@ export default function LoginView() {
                 id="reset-close-btn"
                 onClick={() => setShowResetModal(false)}
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
-                title="Tutup"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -573,7 +506,7 @@ export default function LoginView() {
                   <Lock className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400 animate-pulse" />
                 </div>
                 <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  Pemulihan Sandi Akses BSL
+                  BSL Access Password Recovery
                 </h3>
               </div>
 
@@ -604,19 +537,19 @@ export default function LoginView() {
                 <div className="space-y-5">
                   <div className="space-y-1.5">
                     <h4 className="text-xs font-bold text-slate-850 dark:text-slate-200">
-                      Langkah 1: Hubungkan Email Terdaftar
+                      Step 1: Verify Registered Email
                     </h4>
                     <p className="text-xs text-slate-405 dark:text-slate-400 leading-relaxed">
-                      Sistem akan mengirimkan token verifikasi 6-digit ke alamat email korporat Anda. Silakan pilih peran & ketik email Anda:
+                      The system will send a 6-digit verification code to your corporate email address. Please select your role and enter your email address:
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-[10.5px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                      PILIH PERAN AKSES
+                      SELECT ACCESS ROLE
                     </label>
                     <div className="grid grid-cols-2 gap-2">
-                      <button
+                       <button
                         type="button"
                         onClick={() => {
                           setResetRole('Staff');
@@ -649,7 +582,7 @@ export default function LoginView() {
 
                   <div>
                     <label className="block text-[10.5px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 font-mono">
-                      EMAIL AKSES DI DATABASE
+                      DATABASE ACCESS EMAIL
                     </label>
                     <input
                       type="email"
@@ -680,12 +613,12 @@ export default function LoginView() {
                     {resetSending ? (
                       <span className="flex items-center gap-1.5 animate-pulse">
                         <span className="h-2 w-2 rounded-full bg-white block animate-ping" />
-                        Mengirim Surel Otomatis Ke {resetTarget}...
+                        Sending Verification to {resetTarget}...
                       </span>
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        Kirim Kode Verifikasi Email
+                        Send Verification Code
                       </>
                     )}
                   </button>
@@ -697,10 +630,10 @@ export default function LoginView() {
                 <div className="space-y-5">
                   <div className="space-y-1.5">
                     <h4 className="text-xs font-bold text-slate-850 dark:text-slate-200">
-                      Langkah 2: Verifikasi Kode OTP Email Your-BSL
+                      Step 2: Verify Your Email OTP Code
                     </h4>
                     <p className="text-xs text-slate-405 dark:text-slate-400 leading-relaxed">
-                      Sebuah kode OTP unik telah dikirimkan ke email <strong className="font-mono text-slate-700 dark:text-slate-300">{resetTarget}</strong>. Anda dapat melihatnya langsung di simulator kotak masuk email di bawah untuk memproses verifikasi instan:
+                      A unique OTP code has been sent to <strong className="font-mono text-slate-700 dark:text-slate-300">{resetTarget}</strong>. You can view it directly in the email simulator box below to process the instant verification:
                     </p>
                   </div>
 
@@ -713,17 +646,17 @@ export default function LoginView() {
                         </div>
                         <span className="text-[10.5px] font-extrabold text-blue-700 dark:text-blue-450 uppercase tracking-wide">Simulator Inbox</span>
                       </div>
-                      <span className="text-[9px] font-mono font-bold text-slate-400 uppercase bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800">Baru Saja Masuk</span>
+                      <span className="text-[9px] font-mono font-bold text-slate-400 uppercase bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800">Just Received</span>
                     </div>
 
                     <div className="space-y-1 text-slate-650 dark:text-slate-350 text-[11px] leading-normal font-medium">
-                      <p><strong>Dari:</strong> Bhakti Samudera Logistics <span className="text-slate-400">&lt;auth.noreply@bsl.co.id&gt;</span></p>
-                      <p><strong>Kepada:</strong> {resetTarget}</p>
+                      <p><strong>From:</strong> Bhakti Samudera Logistics <span className="text-slate-400">&lt;auth.noreply@bsl.co.id&gt;</span></p>
+                      <p><strong>To:</strong> {resetTarget}</p>
                       <p className="pt-1 text-slate-800 dark:text-slate-150 border-t border-slate-100 dark:border-slate-850 mt-1 pb-1">
-                        Sistem mendeteksi permintaan reset sandi untuk akun <strong>{resetRole}</strong>.
+                        We detected a password reset request for your <strong>{resetRole}</strong> account.
                       </p>
                       <div className="bg-white dark:bg-slate-900/60 p-3 rounded-xl border border-blue-200/50 dark:border-blue-950/20 text-center my-2 select-all">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wide">KODE OTP PEMULIHAN AKSES</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wide">ACCESS CODE OTP</span>
                         <span className="text-xl font-mono font-extrabold text-blue-600 dark:text-blue-400 block mt-1 tracking-widest">{otpSentCode}</span>
                       </div>
                     </div>
@@ -732,13 +665,13 @@ export default function LoginView() {
                   {/* Input OTP form field */}
                   <div className="space-y-2">
                     <label className="block text-[10.5px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                      MASUKKAN 6 DIGIT KODE SECURE OTP
+                      ENTER 6-DIGIT SECURE OTP CODE
                     </label>
                     <div className="relative">
                       <input
                         type="text"
                         maxLength={6}
-                        placeholder="Contoh: 123456"
+                        placeholder="e.g. 123456"
                         value={userInputOtp}
                         onChange={(e) => {
                           setUserInputOtp(e.target.value.replace(/\D/g, ''));
@@ -762,7 +695,7 @@ export default function LoginView() {
                       }}
                       className="w-full py-1.5 px-3 rounded-lg text-[10px] font-bold border border-blue-150 bg-blue-50/50 hover:bg-blue-50 text-blue-600 dark:border-blue-900/30 dark:bg-blue-955/20 dark:text-blue-400 transition-all cursor-pointer"
                     >
-                      ⚡ Salin & Isi OTP Otomatis
+                      ⚡ Copy & Autofill OTP Code
                     </button>
 
                     <button
@@ -771,12 +704,12 @@ export default function LoginView() {
                         if (userInputOtp === otpSentCode) {
                           setResetStep(3);
                         } else {
-                          setOtpError('Kode OTP salah! Silakan pastikan kode sama persis dengan yang ada dalam Simulator Inbox.');
+                          setOtpError('Incorrect OTP Code! Please make sure it matches the simulator inbox code.');
                         }
                       }}
                       className="w-full h-11 flex items-center justify-center p-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs tracking-wider uppercase transition-all shadow-md active:scale-[0.98] cursor-pointer"
                     >
-                      Bandingkan OTP & Atur Sandi
+                      Verify OTP & Set Password
                     </button>
                   </div>
 
@@ -789,7 +722,7 @@ export default function LoginView() {
                     }}
                     className="w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
                   >
-                    ← Kembali, Edit email
+                    ← Go Back, Choose Email
                   </button>
                 </div>
               )}
@@ -799,21 +732,21 @@ export default function LoginView() {
                 <div className="space-y-5">
                   <div className="space-y-1.5">
                     <h4 className="text-xs font-bold text-slate-850 dark:text-slate-200">
-                      Langkah 3: Masukkan Sandi Baru
+                      Step 3: Enter New Password
                     </h4>
                     <p className="text-xs text-slate-405 dark:text-slate-400 leading-relaxed">
-                      Silakan masukkan dan konfirmasi sandi baru akun <strong className="text-slate-700 dark:text-slate-300">{resetRole}</strong> Anda agar disalin ke basis penyimpanan terenkripsi:
+                      Please enter and confirm a new access password for your <strong className="text-slate-700 dark:text-slate-300">{resetRole}</strong> account to save it securely:
                     </p>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-[10.5px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 font-mono">
-                        KATA SANDI BARU
+                        NEW ACCESS PASSWORD
                       </label>
                       <input
                         type="text"
-                        placeholder="Ketik minimal 4 karakter"
+                        placeholder="Type at least 4 characters"
                         value={newSandi}
                         onChange={(e) => {
                           setNewSandi(e.target.value);
@@ -825,11 +758,11 @@ export default function LoginView() {
 
                     <div>
                       <label className="block text-[10.5px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 font-mono">
-                        KONFIRMASI KATA SANDI BARU
+                        CONFIRM NEW PASSWORD
                       </label>
                       <input
                         type="text"
-                        placeholder="Pastikan sama dengan kata sandi di atas"
+                        placeholder="Must match the password entered above"
                         value={confirmNewSandi}
                         onChange={(e) => {
                           setConfirmNewSandi(e.target.value);
@@ -847,11 +780,11 @@ export default function LoginView() {
                       type="button"
                       onClick={() => {
                         if (newSandi.trim().length < 4) {
-                          setNewSandiValidationError('Kata sandi terlalu pendek! Masukkan minimal 4 karakter.');
+                          setNewSandiValidationError('Password too short! Please enter at least 4 characters.');
                           return;
                         }
                         if (newSandi !== confirmNewSandi) {
-                          setNewSandiValidationError('Kata sandi tidak cocok! Silakan samakan input konfirmasi sandi Anda.');
+                          setNewSandiValidationError('Passwords do not match! Please verify your inputs.');
                           return;
                         }
 
@@ -860,7 +793,7 @@ export default function LoginView() {
                       }}
                       className="w-full h-11 flex items-center justify-center gap-1.5 p-3 rounded-xl bg-emerald-600 hover:bg-emerald-750 text-white font-extrabold text-xs tracking-wider uppercase transition-all shadow-md cursor-pointer border border-emerald-700"
                     >
-                      Simpan Sandi Baru ke Sistem
+                      Save New Password
                     </button>
                   </div>
                 </div>
@@ -874,16 +807,16 @@ export default function LoginView() {
                       <Check className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <h4 className="text-sm font-extrabold text-slate-850 dark:text-slate-100 uppercase tracking-wider">
-                      Kata Sandi Berhasil Diperbarui!
+                      Password Successfully Updated!
                     </h4>
                     <p className="text-xs text-slate-405 dark:text-slate-400 mt-2 px-1 leading-relaxed">
-                      Sandi akses baru Anda untuk akun <strong className="text-slate-700 dark:text-slate-200">{resetRole}</strong> telah berhasil disimpan di dalam local-storage aman.
+                      Your new access password for <strong className="text-slate-700 dark:text-slate-200">{resetRole}</strong> has been successfully updated on secure client storage.
                     </p>
                   </div>
 
                   {/* Informational Autofill suggestion */}
                   <div className="bg-slate-550/5 dark:bg-slate-850 border border-slate-150 dark:border-slate-800 p-3.5 rounded-2xl text-[11px] space-y-1 text-slate-650 dark:text-slate-350 leading-relaxed font-semibold">
-                    <div className="text-[10px] text-slate-400 tracking-wider font-extrabold">Sandi Baru Disimpan:</div>
+                    <div className="text-[10px] text-slate-400 tracking-wider font-extrabold">New Saved Password:</div>
                     <div className="text-sm text-emerald-600 dark:text-emerald-400 font-mono tracking-wider font-extrabold bg-white dark:bg-slate-900 border py-1 rounded-xl">{newSandi}</div>
                   </div>
 
@@ -899,7 +832,7 @@ export default function LoginView() {
                     }}
                     className="w-full h-11 flex items-center justify-center p-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs tracking-wider uppercase transition-all shadow-md active:scale-[0.98] cursor-pointer"
                   >
-                    Masuk Sekarang ke Portal
+                    Go to Portal Login
                   </button>
                 </div>
               )}

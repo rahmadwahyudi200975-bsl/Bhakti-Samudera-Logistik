@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { getSumOfCosts, formatRupiah } from '../data';
+import CompanyLogo from './CompanyLogo';
+import { UserRole } from '../types';
 
 export default function Topbar() {
   const { 
@@ -89,8 +91,8 @@ export default function Topbar() {
         <div className="w-10 md:hidden h-1" />
         
         {/* Premium Corporate Logo badge */}
-        <div className="hidden sm:flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md shadow-blue-500/15 border border-blue-200/20 shrink-0 dark:from-sky-505 dark:to-blue-600 dark:border-slate-800">
-          <Anchor className="h-5.5 w-5.5" />
+        <div className="hidden sm:flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 border border-slate-200/60 shadow-soft-sm shrink-0 dark:bg-slate-800 dark:border-slate-700">
+          <CompanyLogo className="h-9 w-9" />
         </div>
 
         <div>
@@ -225,52 +227,44 @@ export default function Topbar() {
                 <p className="text-xs font-bold text-slate-850 dark:text-slate-100 mt-0.5">{currentUser.fullName}</p>
                 <p className="text-[10px] font-mono text-slate-500 mt-0.5">{currentUser.username}</p>
               </div>
-              <div className="p-1 space-y-1 mt-1">
-                <button
-                  id="dropdown-switch-role-staff"
-                  onClick={() => {
-                    switchRole('Staff');
-                    setUserDropdownOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all ${
-                    currentRole === 'Staff'
-                      ? 'bg-blue-50 text-blue-650 dark:bg-blue-950/20 dark:text-blue-400'
-                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-805'
-                  }`}
-                >
-                  <UserIcon className="h-4 w-4" />
-                  Switch to Staff Ops
-                </button>
-                <button
-                  id="dropdown-switch-role-director"
-                  onClick={() => {
-                    switchRole('Director');
-                    setUserDropdownOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all ${
-                    currentRole === 'Director'
-                      ? 'bg-blue-50 text-blue-650 dark:bg-blue-950/20 dark:text-blue-400'
-                      : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-805'
-                  }`}
-                >
-                  <UserIcon className="h-4 w-4" />
-                  Switch to Director
-                </button>
-
-                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-
-                <button
-                  id="dropdown-logout"
-                  onClick={() => {
-                    logout();
-                    setUserDropdownOpen(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20 transition-all text-left cursor-pointer"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Keluar (Log Out)
-                </button>
+              <div className="pt-2 pb-1 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl">
+                <p className="px-2.5 pb-1 text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  Switch System Access
+                </p>
+                <div className="px-2 pb-1">
+                  <select
+                    id="topbar-role-select"
+                    value={currentRole}
+                    onChange={(e) => {
+                      switchRole(e.target.value as UserRole);
+                      setUserDropdownOpen(false);
+                    }}
+                    className="w-full rounded-xl bg-white dark:bg-slate-800 py-2 px-2 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-soft-xs"
+                  >
+                    <option value="President Director">👑 President Director</option>
+                    <option value="Director of Operation">⚙️ Director of Operation</option>
+                    <option value="Director of Finance">💼 Director of Finance</option>
+                    <option value="Finance Staff">💳 Finance Staff</option>
+                    <option value="Operation Staff">⚓ Operation Staff</option>
+                    <option value="Director">🛡️ Director (Legacy)</option>
+                    <option value="Staff">🔑 Staff Ops (Legacy)</option>
+                  </select>
+                </div>
               </div>
+
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
+              <button
+                id="dropdown-logout"
+                onClick={() => {
+                  logout();
+                  setUserDropdownOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20 transition-all text-left cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+                Keluar (Log Out)
+              </button>
             </div>
           )}
         </div>

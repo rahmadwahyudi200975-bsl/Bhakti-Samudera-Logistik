@@ -668,7 +668,7 @@ export default function ShipmentsView() {
                                 {validateISO6346(s.containerNumber) ? (
                                   <span className="text-[9px] font-bold text-emerald-600 block">✓ Valid ISO 6346</span>
                                 ) : (
-                                  <span className="text-[9px] font-bold text-rose-500 block animate-pulse">⚠️ Check-digit salah</span>
+                                  <span className="text-[9px] font-bold text-rose-500 block animate-pulse">⚠️ Check-digit invalid</span>
                                 )}
                               </div>
                             ) : (
@@ -882,11 +882,11 @@ export default function ShipmentsView() {
                                     <div className="flex items-center gap-1.5">
                                       <CheckSquare className="h-4.5 w-4.5 text-emerald-600 shrink-0" />
                                       <h4 className="font-extrabold text-[11px] uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                                        Mandatory Checklist Dokumen
+                                        Mandatory Document Checklist
                                       </h4>
                                     </div>
                                     <span className="text-[10px] font-mono font-bold bg-slate-50 border dark:bg-slate-900/60 dark:border-slate-805 px-1.5 py-0.5 rounded text-emerald-600">
-                                      {checklistFraction} Mandat
+                                      {checklistFraction} Mandatory
                                     </span>
                                   </div>
 
@@ -899,7 +899,7 @@ export default function ShipmentsView() {
                                   </div>
 
                                   <p className="text-[10.5px] text-slate-500 mb-3 leading-relaxed">
-                                    Klik baris dokumen di bawah untuk mengubah status kelengkapan berkas fisik secara real-time:
+                                    Click document rows below to toggle physical document checklist status in real-time:
                                   </p>
 
                                   <div className="space-y-2">
@@ -933,18 +933,18 @@ export default function ShipmentsView() {
                                 </div>
 
                                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-                                  <span>Tersinkron otomatis</span>
-                                  <span>✓ Operasional Lancar</span>
+                                  <span>Auto-synchronized</span>
+                                  <span>✓ Smooth Operations</span>
                                 </div>
                               </div>
 
                               {/* MODULE 3: LAMPIRAN BERKAS / FILE ATTACHMENTS (3 Columns) */}
-                              <div className="lg:col-span-3 bg-white dark:bg-slate-850 rounded-xl p-4.5 border border-slate-155/80 dark:border-slate-800/80 shadow-soft-xs flex flex-col justify-between">
+                              <div className="lg:col-span-3 bg-white dark:bg-slate-855 rounded-xl p-4.5 border border-slate-155/80 dark:border-slate-800/80 shadow-soft-xs flex flex-col justify-between">
                                 <div>
                                   <div className="flex items-center gap-1.5 mb-3.5 border-b border-slate-100 pb-2 dark:border-slate-800">
                                     <FileUp className="h-4.5 w-4.5 text-blue-600 shrink-0" />
                                     <h4 className="font-extrabold text-[11px] uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                                      Unggah Bukti & Berkas
+                                      Upload Proof & Case Documents
                                     </h4>
                                   </div>
 
@@ -954,13 +954,13 @@ export default function ShipmentsView() {
                                     className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50/20 dark:hover:bg-slate-800 p-3.5 rounded-xl text-center cursor-pointer transition-all mb-3.5"
                                   >
                                     <FileUp className="h-6 w-6 text-slate-400 mx-auto mb-1 group-hover:text-blue-500 animate-bounce" />
-                                    <p className="font-extrabold text-[10.5px] text-blue-650">Unggah Berkas Baru</p>
+                                    <p className="font-extrabold text-[10.5px] text-blue-650">Upload New Document</p>
                                     <p className="text-[9.5px] text-slate-405 mt-0.5">Supports PDF, Image (Max 10MB)</p>
                                   </div>
 
                                   {/* Attachments list count */}
                                   <span className="text-[10px] font-bold text-slate-400 block mb-2">
-                                    Berkas Terunggah ({s.attachments?.length || 0}):
+                                    Uploaded Files ({s.attachments?.length || 0}):
                                   </span>
 
                                   <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
@@ -985,7 +985,7 @@ export default function ShipmentsView() {
                                             type="button"
                                             onClick={() => handleSimulateRemoveFile(s, file.id)}
                                             className="text-rose-500 hover:text-rose-700 bg-white dark:bg-slate-800 p-1 rounded border dark:border-slate-705 opacity-80 hover:opacity-100"
-                                            title="Hapus Berkas"
+                                            title="Remove File"
                                           >
                                             <Trash2 className="h-3 w-3" />
                                           </button>
@@ -993,14 +993,14 @@ export default function ShipmentsView() {
                                       ))
                                     ) : (
                                       <div className="p-4.5 text-center rounded-xl bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-150 text-[10px] text-slate-400">
-                                        Belum ada lampiran berkas yang diupload operasional.
+                                        No physical attachments uploaded yet.
                                       </div>
                                     )}
                                   </div>
                                 </div>
 
                                 <div className="mt-4 pt-3 border-t border-slate-150 dark:border-slate-800 text-[9.5px] text-slate-400 leading-normal">
-                                  💡 Supir & Lapangan dapat upload dokumen DO / SP2B via HP.
+                                  💡 Field agents can upload DO / SP2B documents directly via mobile.
                                 </div>
                               </div>
 
@@ -1173,7 +1173,7 @@ export default function ShipmentsView() {
                   </div>
 
                   <div>
-                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Port of Discharge (Pelabuhan Bongkar)</label>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Port of Discharge</label>
                     <input
                       type="text"
                       placeholder="e.g., Tanjung Priok, Jakarta"
@@ -1225,7 +1225,7 @@ export default function ShipmentsView() {
                   {/* CONTAINER NUMBER STANDARDS & DELAYS CHECKERS */}
                   <div>
                     <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">
-                      Container Number Alfanumerik (11 Karakter)
+                      Alphanumeric Container Number (11 Characters)
                     </label>
                     <input
                       type="text"
@@ -1237,18 +1237,18 @@ export default function ShipmentsView() {
                     />
                     {formContainerNumber ? (
                       validateISO6346(formContainerNumber) ? (
-                        <span className="text-[10px] text-emerald-600 block font-bold mt-1">✓ Nomor Kontainer Valid ISO 6346</span>
+                        <span className="text-[10px] text-emerald-600 block font-bold mt-1">✓ Valid ISO 6346 Container Number</span>
                       ) : (
-                        <span className="text-[10px] text-rose-500 block font-bold mt-1 animate-pulse">⚠️ Perhatian: Check-digit kontainer salah / silakan cek kembali ketikan Anda</span>
+                        <span className="text-[10px] text-rose-500 block font-bold mt-1 animate-pulse">⚠️ Warning: Container check-digit is invalid / please double check your entry</span>
                       )
                     ) : (
-                      <span className="text-[10px] text-slate-400 block mt-1">Masukkan ID Kontainer standar ISO</span>
+                      <span className="text-[10px] text-slate-400 block mt-1">Enter ISO standard Container ID</span>
                     )}
                   </div>
 
                   <div>
                     <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">
-                      Estimasi Waktu Selesai (Target Deadline)
+                      Estimated Completion Target Deadline
                     </label>
                     <input
                       type="date"

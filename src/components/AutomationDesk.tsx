@@ -53,26 +53,26 @@ export default function AutomationDesk() {
   // Template datasets for instant importing without typing
   const IMPORT_TEMPLATES = [
     {
-      name: 'Manifest Besi Baja PT Krakatau (3 Kontainer)',
+      name: 'Krakatau Steel Manifest (3 Containers)',
       csv: `CustomerName,Commodity,ContainerNo,ContainerSize,ContainerQty,ETA,BLNumber,PIBNo,PortOfDischargeCode,CargoValueUSD,ServiceFeeIDR
-"PT Krakatau Steel Tbk","Besi Baja Slab H-Beam","MSKU4582910","40ft HC",3,"2026-06-12","MSK9917362","0218392","IDTPE",75000,12000000
-"PT Krakatau Steel Tbk","Plat Besi Hot Rolled Coil","HLXU8817265","40ft",2,"2026-06-14","HLX8812635","0298172","IDTPE",62000,8500000
-"PT Krakatau Steel Tbk","Baja Paduan Spesial","OCGU3345812","20ft",1,"2026-06-18","OCG7162541","0254321","IDTPE",41000,6000000`
+"PT Krakatau Steel Tbk","Steel Slab H-Beam","MSKU4582910","40ft HC",3,"2026-06-12","MSK9917362","0218392","IDTPE",75000,12000000
+"PT Krakatau Steel Tbk","Hot Rolled Coil Steel Plate","HLXU8817265","40ft",2,"2026-06-14","HLX8812635","0298172","IDTPE",62000,8500000
+"PT Krakatau Steel Tbk","Special Alloy Steel","OCGU3345812","20ft",1,"2026-06-18","OCG7162541","0254321","IDTPE",41000,6000000`
     },
     {
-      name: 'Konsinyasi Tekstil PT Sandang Prima (2 LCL / FCL)',
+      name: 'PT Sandang Prima Textile Consignment (2 LCL / FCL)',
       csv: `CustomerName,Commodity,ContainerNo,ContainerSize,ContainerQty,ETA,BLNumber,PIBNo,PortOfDischargeCode,CargoValueUSD,ServiceFeeIDR
 "PT Sandang Prima Indo","Synthetic Fiber Yarn 5402","TGBU6615729","20ft",2,"2026-06-22","TGB6655123","0312543","IDTPP",38000,9000000
-"PT Sandang Prima Indo","Bahan Kain Gulungan Katun","LCL-TEMPORARY","LCL",1,"2026-06-26","LCL8817351","0312999","IDTPP",14000,4500000`
+"PT Sandang Prima Indo","Cotton Weft Rolled Fabric","LCL-TEMPORARY","LCL",1,"2026-06-26","LCL8817351","0312999","IDTPP",14000,4500000`
     }
   ];
 
   const HS_CODES = [
-    { code: '7208', name: 'HS 7208: Besi & Flat-Steel (Bea Masuk: 10%, PPN: 11%, PPH: 2.5%)', bm: 10, ppn: 11, pph: 2.5 },
-    { code: '8471', name: 'HS 8471: Komputer, Server, IT (Bea Masuk: 0%, PPN: 11%, PPH: 2.5%)', bm: 0, ppn: 11, pph: 2.5 },
-    { code: '3907', name: 'HS 3907: Bahan Plastik Polimer (Bea Masuk: 5%, PPN: 11%, PPH: 7.5%)', bm: 5, ppn: 11, pph: 7.5 },
-    { code: '5402', name: 'HS 5402: Benang Sintetis/Filament (Bea Masuk: 10%, PPN: 11%, PPH: 7.5%)', bm: 10, ppn: 11, pph: 7.5 },
-    { code: '8708', name: 'HS 8708: Komponen & Aksesoris Otomotif (Bea Masuk: 15%, PPN: 11%, PPH: 2.5%)', bm: 15, ppn: 11, pph: 2.5 }
+    { code: '7208', name: 'HS 7208: Iron & Flat-Steel (Duty: 10%, VAT: 11%, Income Tax: 2.5%)', bm: 10, ppn: 11, pph: 2.5 },
+    { code: '8471', name: 'HS 8471: Computers, Servers, IT (Duty: 0%, VAT: 11%, Income Tax: 2.5%)', bm: 0, ppn: 11, pph: 2.5 },
+    { code: '3907', name: 'HS 3907: Polymer Plastic Materials (Duty: 5%, VAT: 11%, Income Tax: 7.5%)', bm: 5, ppn: 11, pph: 7.5 },
+    { code: '5402', name: 'HS 5402: Synthetic Tint/Filament (Duty: 10%, VAT: 11%, Income Tax: 7.5%)', bm: 10, ppn: 11, pph: 7.5 },
+    { code: '8708', name: 'HS 8708: Automotive Components & Accessories (Duty: 15%, VAT: 11%, Income Tax: 2.5%)', bm: 15, ppn: 11, pph: 2.5 }
   ];
 
   // Helper cost structure builder to reduce boilerplate
@@ -139,7 +139,7 @@ export default function AutomationDesk() {
   // Execute Batch Automated Shipment Creation
   const handleProcessImport = () => {
     if (importPreview.length === 0) {
-      setImportStatus({ success: false, message: 'Harap isi data CSV atau pilih salah satu template instan di atas.' });
+      setImportStatus({ success: false, message: 'Please fill in the CSV data or select one of the instant templates above.' });
       return;
     }
 
@@ -216,7 +216,7 @@ export default function AutomationDesk() {
 
       setImportStatus({
         success: true,
-        message: `BERHASIL! ${successCount} data manifes kargo berhasil didorong masuk ke server database digital pusat secara instan.`,
+        message: `SUCCESS! ${successCount} cargo manifest records have been successfully added to the central digital database instants.`,
         count: successCount
       });
       setCsvText('');
@@ -288,7 +288,7 @@ export default function AutomationDesk() {
 
       addLog('Generated Master Excel/CSV Ledger Download from Device', 'SYSTEM', 'EXPORT');
     } catch (err) {
-      alert('Gagal mengekspor data: ' + err);
+      alert('Failed to export data: ' + err);
     }
   };
 
@@ -301,9 +301,9 @@ export default function AutomationDesk() {
       ).join('\n');
 
       navigator.clipboard.writeText(headers + rows);
-      alert('Tabel database berhasil disalin ke clipboard! Anda bisa langsung paste (Ctrl+V) di Microsoft Excel atau Google Sheets.');
+      alert('Database table successfully copied to clipboard! You can paste (Ctrl+V) directly into Microsoft Excel or Google Sheets.');
     } catch (err) {
-      alert('Gagal menyalin: Gunakan ekspor file .csv langsung.');
+      alert('Failed to copy: Use CSV file export instead.');
     }
   };
 
@@ -348,7 +348,7 @@ export default function AutomationDesk() {
         ...item.estimatedCosts,
         pdri: calculatedTaxes.totalPdri
       },
-      notes: `${item.notes || ''} [AUTO-CALC] Bea Masuk & PDRI Pajak Pajak hitung otomatis via HS Code ${calculatedTaxes.tariff.code} dihitung dari CIF USD ${cifUsd}.`.trim()
+      notes: `${item.notes || ''} [AUTO-CALC] Customs duty & PDRI taxes calculated automatically via HS Code ${calculatedTaxes.tariff.code} based on CIF USD ${cifUsd}.`.trim()
     };
 
     updateShipment(updatedShipment);
@@ -430,7 +430,7 @@ export default function AutomationDesk() {
       revenue: makeDefaultRevenue(extractedData.serviceFee),
       invoiceStatus: 'Unbilled',
       cashFlowStatus: 'Unfunded',
-      notes: `Digitisasi otomatis berkas kertas via Scanner Kamera HP (Akurasi Sensor AI OCR: ${extractedData.confidence}%).`,
+      notes: `Automated digitization of physical paperwork via phone camera sensor (AI OCR Sensor Accuracy: ${extractedData.confidence}%).`,
       isApproved: false,
       documentChecklist: {
         billOfLading: true,
@@ -443,7 +443,7 @@ export default function AutomationDesk() {
     });
 
     addLog(`Digitized paper B/L via Camera OCR Scanner [${customJobNo}]`, `BSL-2026-${sequence}`, customJobNo);
-    alert(`Sukses! Registrasi data kargo kargo hasil scan OCR telah didaftarkan dengan ID BSL-2026-${sequence}.`);
+    alert(`Success! Cargo data registered from OCR scan has been added with ID BSL-2026-${sequence}.`);
     setExtractedData(null);
   };
 
@@ -460,13 +460,13 @@ export default function AutomationDesk() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-extrabold tracking-wide uppercase">Pusat Otomatisasi & Digitalisasi Laptop/HP</h3>
+              <h3 className="text-sm font-extrabold tracking-wide uppercase">Automation & Digitalization Center (PC/Mobile)</h3>
               <span className="inline-flex items-center gap-0.5 rounded bg-amber-400 px-1.5 py-0.5 text-[9px] font-black text-slate-900 tracking-wider animate-pulse">
-                ANTI-KERTAS & EXCEL
+                PAPERLESS & DIGITAL
               </span>
             </div>
             <p className="text-[11px] text-white/80 leading-normal mt-0.5">
-              Kelola ekspor-impor data instan, auto-hitung pajak HS Code, dan scan dokumen fisik lewat HP di lapangan.
+              Manage instant import-export data, auto-compute taxes by HS Code, and scan physical documents on-site.
             </p>
           </div>
         </div>
@@ -476,7 +476,7 @@ export default function AutomationDesk() {
             <span>Responsive Mobile Cockpit Active</span>
           </div>
           <span className="text-xs font-bold px-2 py-1 bg-white/20 rounded-md">
-            {isOpen ? 'Sembunyikan Panel' : 'Buka Dashboard'}
+            {isOpen ? 'Hide Panel' : 'Open Dashboard'}
           </span>
         </div>
       </div>
@@ -518,7 +518,7 @@ export default function AutomationDesk() {
               }`}
             >
               <Percent className="h-4 w-4" />
-              Kalkulator Pajak PIB
+              Customs Tax Calculator
             </button>
             <button
               onClick={() => setActiveTab('ocr')}
@@ -538,9 +538,9 @@ export default function AutomationDesk() {
             <div className="space-y-4">
               <div className="bg-slate-50 dark:bg-slate-800/30 p-3.5 rounded-xl border border-slate-150 dark:border-slate-800 text-[11.5px] leading-relaxed text-slate-550 dark:text-slate-350 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                 <div>
-                  <b className="text-slate-800 dark:text-slate-100 uppercase tracking-tight">Otomatisasi Unggah Manifes Kargo</b>
+                  <b className="text-slate-800 dark:text-slate-100 uppercase tracking-tight">Automated Cargo Manifest Import</b>
                   <p className="mt-0.5">
-                    Hindari mengetik satu per satu. Cukup paste data dari file Excel anda atau klik contoh template manifest di samping untuk uji coba cepat.
+                    Avoid manual typing. Simply paste data from your Excel file or click on the template manifest on the right for a quick test.
                   </p>
                 </div>
                 {/* Instant Templates Selector */}
@@ -561,7 +561,7 @@ export default function AutomationDesk() {
               <div className="relative">
                 <textarea
                   className="w-full text-xs font-mono p-4 rounded-xl border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-emerald-450 outline-none focus:border-blue-500 max-h-48 min-h-32"
-                  placeholder='Tempel baris data CSV/Excel di sini (Contoh baris format: CustomerName,Commodity,ContainerNo,ContainerSize,ContainerQty,ETA,BLNumber,PIBNo,PortOfDischargeCode,CargoValueUSD,ServiceFeeIDR)...'
+                  placeholder='Paste CSV/Excel data rows here (Example format: CustomerName,Commodity,ContainerNo,ContainerSize,ContainerQty,ETA,BLNumber,PIBNo,PortOfDischargeCode,CargoValueUSD,ServiceFeeIDR)...'
                   value={csvText}
                   onChange={(e) => {
                     setCsvText(e.target.value);
@@ -589,10 +589,10 @@ export default function AutomationDesk() {
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                       <Eye className="h-3.5 w-3.5" />
-                      Manifest Compilation Preview ({importPreview.length} Baris terdeteksi)
+                      Manifest Compilation Preview ({importPreview.length} Rows detected)
                     </span>
                     <span className="text-[10.5px] select-none text-emerald-600 bg-emerald-50 dark:bg-slate-800 dark:text-emerald-400 px-2 py-0.5 rounded font-black">
-                      Data Bersih & tervalidasi ISO
+                      Clean & ISO-validated Data
                     </span>
                   </div>
                   
@@ -642,7 +642,7 @@ export default function AutomationDesk() {
                       className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-black text-white hover:bg-emerald-700 transition-all shadow shadow-emerald-900/15"
                     >
                       <Layers className="h-4 w-4" />
-                      Push Manifest ke Database Digital (Hilangkan Excel Kertas)
+                      Push Manifest to Central Digital Database (Eliminate Paper Excel)
                     </button>
                   </div>
                 </div>
@@ -659,7 +659,7 @@ export default function AutomationDesk() {
                 </div>
                 <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase tracking-widest">Digital Sheet Mirror Export</h4>
                 <p className="text-[11px] text-slate-500 mt-1 pb-3 leading-relaxed">
-                  Tidak perlu menulis laporan Excel berkala ke grup WhatsApp atau pimpinan secara manual. Gunakan satu klik tombol di bawah ini untuk mengunduh seluruh database kargo operasional teraktual berformat CSV standar yang siap dibuka di Microsoft Excel, Google Sheets, atau dikirim ke Direktur.
+                  No need to write manual periodic Excel reports for WhatsApp groups or management. Use one click below to download the latest operational cargo database in a standard CSV format ready to open in Microsoft Excel, Google Sheets, or share with the Director.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 w-full">
                   <button
@@ -667,7 +667,7 @@ export default function AutomationDesk() {
                     className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-black px-4 py-3 text-xs transition-all shadow shadow-blue-900/10"
                   >
                     <Download className="h-4 w-4" />
-                    Unduh File Excel (.CSV)
+                    Download Excel File (.CSV)
                   </button>
                   <button
                     onClick={handleCopyClipboard}
@@ -678,7 +678,7 @@ export default function AutomationDesk() {
                   </button>
                 </div>
                 <p className="text-[9.5px] text-slate-400 mt-2.5 font-mono">
-                  Mengekspor {shipments.length} baris master ledger kargo importir dengan timestamps sinkronisasi otomatis.
+                  Exporting {shipments.length} master cargo ledger sheets with automatic synchronization timestamps.
                 </p>
               </div>
             </div>
@@ -730,7 +730,7 @@ export default function AutomationDesk() {
                   className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 py-2.5 text-xs transition-all shadow shadow-blue-900/10"
                 >
                   <Percent className="h-4 w-4" />
-                  Kalkulasi Bea Masuk & PDRI Instan
+                  Calculate Duties & Taxes
                 </button>
               </form>
 
@@ -739,37 +739,37 @@ export default function AutomationDesk() {
                 {calculatedTaxes ? (
                   <div className="space-y-2.5 animate-fade-in">
                     <div className="flex justify-between items-center pb-2 border-b border-slate-205 dark:border-slate-800">
-                      <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Aritmatika Lembar PIB Hasil Kompilasi</span>
+                      <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Compiled PIB Customs Arithmetic Sheet</span>
                       <span className="text-[9.5px] font-mono text-slate-500 font-semibold bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded">AUTO-PIB</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[10px]">CIF Nilai Pabean (USD)</span>
+                        <span className="text-slate-400 block text-[10px]">Customs Value CIF (USD)</span>
                         <b className="font-mono text-slate-700 dark:text-slate-250">${cifUsd.toLocaleString()}</b>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Kurs Setara Rupiah CIF</span>
+                        <span className="text-slate-400 block text-[10px]">Rupiah Equivalent CIF</span>
                         <b className="font-mono text-rose-600 dark:text-rose-450">{formatRupiah(calculatedTaxes.cifInIdr)}</b>
                       </div>
                     </div>
 
                     <div className="space-y-1 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 text-[11px] font-mono leading-none">
                       <div className="flex justify-between">
-                        <span className="text-slate-500">1. Bea Masuk Impor (BM) ({calculatedTaxes.tariff.bm}%):</span>
+                        <span className="text-slate-500">1. Customs Import Duty (BM) ({calculatedTaxes.tariff.bm}%):</span>
                         <span className="text-slate-700 dark:text-slate-300 font-semibold">{formatRupiah(calculatedTaxes.bmValue)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">2. Pajak Pertambahan Nilai (PPN) ({calculatedTaxes.tariff.ppn}%):</span>
+                        <span className="text-slate-500">2. Value Added Tax (VAT/PPN) ({calculatedTaxes.tariff.ppn}%):</span>
                         <span className="text-slate-700 dark:text-slate-300 font-semibold">{formatRupiah(calculatedTaxes.ppnValue)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">3. Pajak Penghasilan Pasal 22 (PPH) ({calculatedTaxes.tariff.pph}%):</span>
+                        <span className="text-slate-500">3. Income Tax Article 22 (PPH) ({calculatedTaxes.tariff.pph}%):</span>
                         <span className="text-slate-700 dark:text-slate-300 font-semibold">{formatRupiah(calculatedTaxes.pphValue)}</span>
                       </div>
                       <div className="flex justify-between py-1.5 border-t border-dashed border-slate-200 dark:border-slate-800 mt-1 font-sans font-black text-xs">
-                        <span className="text-slate-850 dark:text-slate-200">TOTAL BILLING PAJAK PDRI IMPOR:</span>
-                        <span className="text-blue-600 dark:text-sky-400">{formatRupiah(calculatedTaxes.totalPdri)}</span>
+                        <span className="text-slate-850 dark:text-slate-200">TOTAL CUSTOMS PDRI TAX PAYABLE:</span>
+                        <span className="text-blue-600 dark:text-sky-450">{formatRupiah(calculatedTaxes.totalPdri)}</span>
                       </div>
                     </div>
 
@@ -781,7 +781,7 @@ export default function AutomationDesk() {
                         onChange={(e) => setTargetShipmentId(e.target.value)}
                         className="rounded-xl border border-slate-200 bg-white p-2 text-xs font-bold text-slate-750 dark:border-slate-750 dark:bg-slate-900 dark:text-slate-300 max-w-[200px] flex-1 outline-none"
                       >
-                        <option value="">Pilih Target Shipment...</option>
+                        <option value="">Choose Target Shipment...</option>
                         {shipments.map(s => (
                           <option key={s.id} value={s.id}>{s.id} - {s.customerName.slice(0, 16)}...</option>
                         ))}
@@ -797,21 +797,21 @@ export default function AutomationDesk() {
                         }`}
                       >
                         <BookOpen className="h-3.5 w-3.5" />
-                        Tembak Nilai Pajak ke Form
+                        Apply Taxes to Shipment
                       </button>
                     </div>
 
                     {taxApplySuccess && (
                       <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-bold animate-pulse text-right">
-                        ✓ Berhasil disuntikkan secara otomatis. Nilai taksiran PDRI di ShipmentsView diperbarui!
+                        ✓ Automatically applied. Estimated PDRI value updated in the shipment record!
                       </span>
                     )}
                   </div>
                 ) : (
                   <div className="my-auto text-center py-6 text-slate-400">
                     <Info className="h-8 w-8 mx-auto text-slate-305 dark:text-slate-700 mb-2" />
-                    <p className="text-xs font-bold uppercase tracking-wider">Silakan tekan tombol kalkulasi untuk memulai</p>
-                    <p className="text-[10px] text-slate-400 leading-normal mt-0.5">Sistem akan mengalkulasikan tarif BM, PPN, dan PPH berdasarkan peraturan bea cukai Indonesia terbaru.</p>
+                    <p className="text-xs font-bold uppercase tracking-wider">Please click the calculate button to start</p>
+                    <p className="text-[10px] text-slate-400 leading-normal mt-0.5">The system will calculate BM, PPN, and PPH duty rates based on the latest Indonesian customs regulations.</p>
                   </div>
                 )}
               </div>
@@ -822,8 +822,8 @@ export default function AutomationDesk() {
           {activeTab === 'ocr' && (
             <div className="space-y-4">
               <div className="bg-slate-50 dark:bg-slate-805 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] leading-relaxed text-slate-550 dark:text-slate-400">
-                💡 <b>Dokumen Dokumen Lapangan Langsung Jadi Draf Digital (OCR Mode Telepon HP)</b><br/>
-                Jika di pelabuhan/lapangan staf menerima lembar Bill Of Lading kertas dari pelayaran, draf input dapat di-scan via kamera HP. Klik tombol scan di bawah untuk mensimulasikan ekstraksi metadata instant.
+                💡 <b>Direct Field Document to Digital Draft (Smart Mobile OCR Mode)</b><br/>
+                If staff receive physical Bill of Lading sheets from shipping lines on-site, a draft entry can be scanned via a phone camera. Click scan below to simulate instant metadata extraction.
               </div>
 
               {!extractedData && !ocrScanning && (
@@ -833,10 +833,10 @@ export default function AutomationDesk() {
                 >
                   <UploadCloud className="h-10 w-10 text-slate-400 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-200 animate-bounce" />
                   <h5 className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-2 uppercase tracking-widest">
-                    Simulasikan Kamera HP Scan Kertas B/L Pelabuhan
+                    Simulate Phone Camera Scan of Physical B/L
                   </h5>
                   <p className="text-[11px] text-slate-400 mt-1 max-w-sm leading-relaxed">
-                    Klik di sini untuk meniru jepretan kamera ponsel terhadap manifest Bill of Lading pelayaran di pelabuhan.
+                    Click here to simulate a mobile lens capture of custom shipping manifest documentation on-site.
                   </p>
                 </div>
               )}
@@ -851,7 +851,7 @@ export default function AutomationDesk() {
                     </div>
                   </div>
                   <div className="max-w-xs mx-auto">
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-sky-450 uppercase tracking-widest">Membaca Serat Kertas Manifest via Vision AI...</span>
+                    <span className="text-[10px] font-bold text-blue-600 dark:text-sky-450 uppercase tracking-widest">Extracting paper manifest details via Vision AI...</span>
                     <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 dark:bg-slate-800 overflow-hidden">
                       <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-200" style={{ width: `${scanProgress}%` }} />
                     </div>
@@ -866,7 +866,7 @@ export default function AutomationDesk() {
                     <div className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
                       <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-400 uppercase tracking-widest">
-                        Berhasil Mengekstraksi Berkas Markings (Confidence: {extractedData.confidence}%)
+                        Successfully Extracted Document Marks (Confidence: {extractedData.confidence}%)
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400">100% No Typing required</span>
@@ -904,14 +904,14 @@ export default function AutomationDesk() {
                       onClick={() => setExtractedData(null)}
                       className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-350 pr-2"
                     >
-                      Batal
+                      Cancel
                     </button>
                     <button
                       onClick={handleRegisterOCRDraft}
                       className="flex items-center gap-1 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 px-4 py-2.5 text-xs transition-all shadow shadow-emerald-900/10"
                     >
                       <Sparkles className="h-4 w-4" />
-                      Daftarkan sebagai Draft Kargo Baru (0 Papertrail)
+                      Register as New Cargo Draft (Zero Paper Trail)
                     </button>
                   </div>
                 </div>

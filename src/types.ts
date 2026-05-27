@@ -4,7 +4,22 @@
  */
 
 // User Role Definition
-export type UserRole = 'Staff' | 'Director';
+export type UserRole =
+  | 'President Director'
+  | 'Director of Operation'
+  | 'Director of Finance'
+  | 'Finance Staff'
+  | 'Operation Staff'
+  | 'Staff'
+  | 'Director';
+
+export const isDirectorRole = (role: UserRole): boolean => {
+  return ['President Director', 'Director of Operation', 'Director of Finance', 'Director'].includes(role);
+};
+
+export const isStaffRole = (role: UserRole): boolean => {
+  return ['Finance Staff', 'Operation Staff', 'Staff'].includes(role);
+};
 
 export interface User {
   username: string;
@@ -109,6 +124,15 @@ export interface Shipment {
   isApproved: boolean;                // Director approval for actual funding expenditures
   createdAt: string;                  // YYYY-MM-DD
   updatedAt: string;                  // YYYY-MM-DD
+}
+
+export interface RegisteredUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  password?: string;
+  createdAt: string;
 }
 
 export interface ActivityLog {

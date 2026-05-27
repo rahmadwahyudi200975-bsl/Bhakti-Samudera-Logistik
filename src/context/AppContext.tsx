@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Shipment, ActivityLog, User, UserRole } from '../types';
+import { Shipment, ActivityLog, User, UserRole, RegisteredUser } from '../types';
 import { initialShipments, initialActivityLogs } from '../data';
 
 interface AppContextType {
@@ -15,6 +15,8 @@ interface AppContextType {
   darkMode: boolean;
   selectedView: 'dashboard' | 'shipments' | 'costing' | 'revenue' | 'reports';
   isAuthenticated: boolean;
+  registeredUsers: RegisteredUser[];
+  companyLogo: string | null;
   setShipments: React.Dispatch<React.SetStateAction<Shipment[]>>;
   setSelectedView: (view: 'dashboard' | 'shipments' | 'costing' | 'revenue' | 'reports') => void;
   addShipment: (shipment: Omit<Shipment, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -24,9 +26,12 @@ interface AppContextType {
   switchRole: (role: UserRole) => void;
   toggleDarkMode: () => void;
   addLog: (action: string, shipmentId: string, jobNo: string) => void;
-  login: (role: UserRole, password: string) => boolean;
+  login: (emailOrRole: string, password?: string) => boolean;
   logout: () => void;
   resetPassword: (role: UserRole, newPw: string) => void;
+  registerUser: (email: string, fullName: string, role: UserRole, password?: string) => void;
+  deleteUser: (id: string) => void;
+  updateCompanyLogo: (logo: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -105,9 +110,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return stored ? JSON.parse(stored) : initialActivityLogs;
   });
 
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => {
+    const stored = localStorage.getItem('bsl_registered_users_v2');
+    if (stored) return JSON.parse(stored);
+    return [
+      { id: 'usr-1', email: 'director@bsl.co.id', fullName: 'Director Imron Syahputra', role: 'Director', password: 'director123', createdAt: '2026-05-27' },
+      { id: 'usr-2', email: 'staff.ops@bsl.co.id', fullName: 'Robby Hermawan (Ops)', role: 'Staff', password: 'staff123', createdAt: '2026-05-27' },
+      { id: 'usr-3', email: 'president@bsl.co.id', fullName: 'President Admiral Harry', role: 'President Director', password: 'president123', createdAt: '2026-05-27' },
+      { id: 'usr-4', email: 'ops.dir@bsl.co.id', fullName: 'Director H. Subandono', role: 'Director of Operation', password: 'opsdirector123', createdAt: '2026-05-27' },
+      { id: 'usr-5', email: 'fin.dir@bsl.co.id', fullName: 'Director Sri Mulyani Indrawati', role: 'Director of Finance', password: 'findirector123', createdAt: '2026-05-27' },
+      { id: 'usr-6', email: 'finance.staff@bsl.co.id', fullName: 'Amelia Putri (Finance)', role: 'Finance Staff', password: 'finance123', createdAt: '2026-05-27' },
+      { id: 'usr-7', email: 'operation.staff@bsl.co.id', fullName: 'Robby Hermawan (Ops Team)', role: 'Operation Staff', password: 'operation123', createdAt: '2026-05-27' }
+    ];
+  });
+
+  const [companyLogo, setCompanyLogo] = useState<string | null>(() => {
+    return localStorage.getItem('bsl_company_logo_v2');
+  });
+
   const [currentRole, setCurrentRole] = useState<UserRole>(() => {
     const stored = localStorage.getItem(STORAGE_KEY_ROLE);
-    return (stored as UserRole) || 'Director'; // Default to Director to show premium features on startup, but easily toggled!
+    return (stored as UserRole) || 'Director';
   });
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -122,10 +145,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [selectedView, setSelectedView] = useState<'dashboard' | 'shipments' | 'costing' | 'revenue' | 'reports'>('dashboard');
 
-  const [currentUser, setCurrentUser] = useState<User>({
-    username: currentRole === 'Director' ? 'Director_Imron' : 'Robby_Ops',
-    role: currentRole,
-    fullName: currentRole === 'Director' ? 'Director Imron Syahputra' : 'Robby Hermawan (Ops)'
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const savedRole = localStorage.getItem(STORAGE_KEY_ROLE) as UserRole || 'Director';
+    const loggedInEmail = localStorage.getItem('bsl_logged_in_email');
+    if (loggedInEmail) {
+      const stored = localStorage.getItem('bsl_registered_users_v2');
+      const users: RegisteredUser[] = stored ? JSON.parse(stored) : [];
+      const found = users.find(u => u.email.toLowerCase() === loggedInEmail.toLowerCase());
+      if (found) {
+        return {
+          username: found.email.split('@')[0],
+          role: found.role,
+          fullName: found.fullName
+        };
+      }
+    }
+    const defaultUsersMap: Record<UserRole, { username: string; fullName: string }> = {
+      'President Director': { username: 'president_admiral', fullName: 'President Admiral Harry' },
+      'Director of Operation': { username: 'ops_director', fullName: 'Director H. Subandono' },
+      'Director of Finance': { username: 'fin_director', fullName: 'Director Sri Mulyani Indrawati' },
+      'Finance Staff': { username: 'finance_amelia', fullName: 'Amelia Putri (Finance Staff)' },
+      'Operation Staff': { username: 'operation_robby', fullName: 'Robby Hermawan (Ops Staff)' },
+      'Director': { username: 'Director_Imron', fullName: 'Director Imron Syahputra' },
+      'Staff': { username: 'Robby_Ops', fullName: 'Robby Hermawan (Ops)' }
+    };
+    const defaultUser = defaultUsersMap[savedRole] || defaultUsersMap['Director'];
+    return {
+      username: defaultUser.username,
+      role: savedRole,
+      fullName: defaultUser.fullName
+    };
   });
 
   // Sync state with localstorage
@@ -134,17 +183,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [shipments]);
 
   useEffect(() => {
+    localStorage.setItem('bsl_registered_users_v2', JSON.stringify(registeredUsers));
+  }, [registeredUsers]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(activityLogs));
   }, [activityLogs]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_ROLE, currentRole);
+    const loggedInEmail = localStorage.getItem('bsl_logged_in_email');
+    if (loggedInEmail) {
+      const found = registeredUsers.find(u => u.email.toLowerCase() === loggedInEmail.toLowerCase());
+      if (found) {
+        setCurrentUser({
+          username: found.email.split('@')[0],
+          role: found.role,
+          fullName: found.fullName
+        });
+        return;
+      }
+    }
+    const defaultUsersMap: Record<UserRole, { username: string; fullName: string }> = {
+      'President Director': { username: 'president_admiral', fullName: 'President Admiral Harry' },
+      'Director of Operation': { username: 'ops_director', fullName: 'Director H. Subandono' },
+      'Director of Finance': { username: 'fin_director', fullName: 'Director Sri Mulyani Indrawati' },
+      'Finance Staff': { username: 'finance_amelia', fullName: 'Amelia Putri (Finance Staff)' },
+      'Operation Staff': { username: 'operation_robby', fullName: 'Robby Hermawan (Ops Staff)' },
+      'Director': { username: 'Director_Imron', fullName: 'Director Imron Syahputra' },
+      'Staff': { username: 'Robby_Ops', fullName: 'Robby Hermawan (Ops)' }
+    };
+    const defaultUser = defaultUsersMap[currentRole] || defaultUsersMap['Director'];
     setCurrentUser({
-      username: currentRole === 'Director' ? 'Director_Imron' : 'Robby_Ops',
+      username: defaultUser.username,
       role: currentRole,
-      fullName: currentRole === 'Director' ? 'Director Imron Syahputra' : 'Robby Hermawan (Ops)'
+      fullName: defaultUser.fullName
     });
-  }, [currentRole]);
+  }, [currentRole, registeredUsers]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_DARK, String(darkMode));
@@ -221,28 +296,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCurrentRole(role);
     setIsAuthenticated(false);
     localStorage.removeItem(STORAGE_KEY_AUTH);
+    localStorage.removeItem('bsl_logged_in_email');
   };
 
-  const login = (role: UserRole, password: string): boolean => {
-    let isValid = false;
-    const customDirectorPw = localStorage.getItem('bsl_director_pw') || 'director123';
-    const customStaffPw = localStorage.getItem('bsl_staff_pw') || 'staff123';
+  const login = (emailOrRole: string, password?: string): boolean => {
+    let matchedUser: RegisteredUser | undefined = undefined;
+    const safePw = password || '';
 
-    if (role === 'Director') {
-      if (password === customDirectorPw || password === 'admin') {
-        isValid = true;
+    // Check if it's the old role-based login
+    if (emailOrRole === 'Director') {
+      const customDirectorPw = localStorage.getItem('bsl_director_pw') || 'director123';
+      if (safePw === customDirectorPw || safePw === 'admin') {
+        matchedUser = registeredUsers.find(u => u.role === 'Director');
       }
-    } else if (role === 'Staff') {
-      if (password === customStaffPw || password === 'staff') {
-        isValid = true;
+    } else if (emailOrRole === 'Staff') {
+      const customStaffPw = localStorage.getItem('bsl_staff_pw') || 'staff123';
+      if (safePw === customStaffPw || safePw === 'staff') {
+        matchedUser = registeredUsers.find(u => u.role === 'Staff');
       }
+    } else {
+      // Find by email (case-insensitive) & password
+      matchedUser = registeredUsers.find(
+        u => u.email.toLowerCase() === emailOrRole.trim().toLowerCase() && u.password === safePw
+      );
     }
 
-    if (isValid) {
-      setCurrentRole(role);
+    if (matchedUser) {
+      setCurrentRole(matchedUser.role);
       setIsAuthenticated(true);
+      setCurrentUser({
+        username: matchedUser.email.split('@')[0],
+        role: matchedUser.role,
+        fullName: matchedUser.fullName
+      });
+
       localStorage.setItem(STORAGE_KEY_AUTH, 'true');
-      localStorage.setItem(STORAGE_KEY_ROLE, role);
+      localStorage.setItem(STORAGE_KEY_ROLE, matchedUser.role);
+      localStorage.setItem('bsl_logged_in_email', matchedUser.email);
+      addLog(`User logged in: ${matchedUser.fullName} (${matchedUser.role})`, 'SYSTEM', 'AUTH');
       return true;
     }
     return false;
@@ -254,17 +345,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       localStorage.setItem('bsl_staff_pw', newPw);
     }
+
+    // Also update in registeredUsers
+    setRegisteredUsers(prev => prev.map(u => {
+      if (u.role === role) {
+        return { ...u, password: newPw };
+      }
+      return u;
+    }));
+
     addLog(`Changed security credentials for ${role}`, 'SYSTEM', 'SECURITY');
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem(STORAGE_KEY_AUTH);
+    localStorage.removeItem('bsl_logged_in_email');
     setSelectedView('dashboard');
   };
 
   const toggleDarkMode = () => {
     setDarkMode(prev => !prev);
+  };
+
+  const registerUser = (email: string, fullName: string, role: UserRole, password?: string) => {
+    const newUser: RegisteredUser = {
+      id: `usr-${Date.now().toString().slice(-4)}`,
+      email: email.trim(),
+      fullName: fullName.trim(),
+      role,
+      password: password || 'user123',
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    setRegisteredUsers(prev => [...prev, newUser]);
+    addLog(`Registered new user access: ${fullName} (${role})`, 'SYSTEM', 'ACCESS');
+  };
+
+  const deleteUser = (id: string) => {
+    const user = registeredUsers.find(u => u.id === id);
+    if (user) {
+      setRegisteredUsers(prev => prev.filter(u => u.id !== id));
+      addLog(`Removed user access: ${user.fullName} (${user.role})`, 'SYSTEM', 'ACCESS');
+    }
+  };
+
+  const updateCompanyLogo = (logo: string | null) => {
+    setCompanyLogo(logo);
+    if (logo) {
+      localStorage.setItem('bsl_company_logo_v2', logo);
+    } else {
+      localStorage.removeItem('bsl_company_logo_v2');
+    }
+    // Fire event so CompanyLogo components update instantly
+    window.dispatchEvent(new Event('company-logo-updated'));
+    addLog('Updated company logo configuration', 'SYSTEM', 'BRANDING');
   };
 
   return (
@@ -277,6 +411,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         darkMode,
         selectedView,
         isAuthenticated,
+        registeredUsers,
+        companyLogo,
         setShipments,
         setSelectedView,
         addShipment,
@@ -288,7 +424,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addLog,
         login,
         logout,
-        resetPassword
+        resetPassword,
+        registerUser,
+        deleteUser,
+        updateCompanyLogo
       }}
     >
       {children}

@@ -17,6 +17,8 @@ import {
   Anchor
 } from 'lucide-react';
 import { useState } from 'react';
+import CompanyLogo from './CompanyLogo';
+import { isDirectorRole, UserRole } from '../types';
 
 export default function Sidebar() {
   const { selectedView, setSelectedView, currentRole, switchRole, logout } = useApp();
@@ -27,7 +29,7 @@ export default function Sidebar() {
       id: 'dashboard',
       label: 'Dashboard Overview',
       icon: LayoutDashboard,
-      description: currentRole === 'Director' ? 'Operations & Profit Summary' : 'Ringkasan Operasional & KPI Kerja'
+      description: isDirectorRole(currentRole) ? 'Operations & Profit Summary' : 'Ringkasan Operasional & KPI Kerja'
     },
     {
       id: 'shipments',
@@ -35,7 +37,7 @@ export default function Sidebar() {
       icon: Boxes,
       description: 'Customs Clearance Progress'
     },
-    ...(currentRole === 'Director' ? [
+    ...(isDirectorRole(currentRole) ? [
       {
         id: 'costing',
         label: 'Costing & Funding',
@@ -86,8 +88,8 @@ export default function Sidebar() {
       >
         {/* Header Branding */}
         <div className="flex h-20 items-center gap-3 border-b border-blue-700/60 px-6 dark:border-slate-800">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-white to-blue-50 text-blue-600 font-extrabold text-xl font-sans shrink-0 border border-white/25 shadow-md shadow-blue-800/20 dark:from-slate-800 dark:to-slate-850 dark:border-slate-750 dark:text-sky-400">
-            <Anchor className="h-5.5 w-5.5" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 dark:bg-slate-800 border border-white/10 dark:border-slate-750/70 shrink-0">
+            <CompanyLogo className="h-9 w-9" />
           </div>
           <div>
             <h1 className="text-xs font-black tracking-widest text-white uppercase leading-tight font-sans">
@@ -112,36 +114,25 @@ export default function Sidebar() {
               </div>
             </div>
 
-            {/* Role switch buttons */}
-            <div className="mt-3 grid grid-cols-2 gap-1.5 rounded-lg bg-blue-800 p-1 text-xs dark:bg-slate-805">
-              <button
-                id="role-switch-staff"
-                onClick={() => {
-                  switchRole('Staff');
+            {/* Role switch dropdown */}
+            <div className="mt-3">
+              <select
+                id="role-switch-select"
+                value={currentRole}
+                onChange={(e) => {
+                  switchRole(e.target.value as UserRole);
                   setIsOpen(false);
                 }}
-                className={`rounded-md py-1 text-center font-medium transition-all ${
-                  currentRole === 'Staff'
-                    ? 'bg-white text-blue-900 shadow-soft-sm dark:bg-blue-600 dark:text-white'
-                    : 'text-blue-200 hover:text-white dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
+                className="w-full rounded-lg bg-blue-800 dark:bg-slate-805 py-1.5 px-2.5 text-xs font-bold text-white outline-none border border-blue-600/40 dark:border-slate-700/60 transition-all cursor-pointer"
               >
-                Staff Ops
-              </button>
-              <button
-                id="role-switch-director"
-                onClick={() => {
-                  switchRole('Director');
-                  setIsOpen(false);
-                }}
-                className={`rounded-md py-1 text-center font-medium transition-all ${
-                  currentRole === 'Director'
-                    ? 'bg-white text-blue-900 shadow-soft-sm dark:bg-blue-600 dark:text-white'
-                    : 'text-blue-200 hover:text-white dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                Director
-              </button>
+                <option value="President Director">👑 President Director</option>
+                <option value="Director of Operation">⚙️ Director of Operation</option>
+                <option value="Director of Finance">💼 Director of Finance</option>
+                <option value="Finance Staff">💳 Finance Staff</option>
+                <option value="Operation Staff">⚓ Operation Staff</option>
+                <option value="Director">🛡️ Director (Legacy)</option>
+                <option value="Staff">🔑 Staff Ops (Legacy)</option>
+              </select>
             </div>
           </div>
         </div>
