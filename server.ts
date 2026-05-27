@@ -35,7 +35,7 @@ async function startServer() {
     { id: 'usr-7', email: 'operation.staff@bsl.co.id', fullName: 'Robby Hermawan (Ops Team)', role: 'Operation Staff', password: 'operation123', createdAt: '2026-05-27' }
   ];
 
-  // Keep state in memory as single-source of truth and persist on write
+  // Keep state in memory as single-source of truth and sync to Firestore
   let shipments: Shipment[] = [];
   let activityLogs: ActivityLog[] = [];
   let registeredUsers: RegisteredUser[] = [];
@@ -105,11 +105,10 @@ async function startServer() {
       console.log('Firestore sync successfully completed.');
     } catch (err) {
       console.error('Error getting documents from Firestore:', err);
-      console.log('Using mock fallback...');
     }
   };
 
-  // Run initial Firestore sync
+  // Run initial Firestore sync on boot
   await loadAllFromFirestore();
 
   // API Endpoints
@@ -180,12 +179,11 @@ async function startServer() {
 
       shipments = [newShipment, ...shipments];
       await setDoc(doc(db, 'shipments', newId), newShipment);
-      
       version = Date.now();
       res.json({ success: true, shipment: newShipment, version });
     } catch (err) {
       console.error('Error adding shipment:', err);
-      res.status(500).json({ error: 'Failed to write shipment into Firestore' });
+      res.status(500).json({ error: 'Failed to write shipment to database' });
     }
   });
 
@@ -203,12 +201,11 @@ async function startServer() {
 
       shipments = shipments.map(item => item.id === id ? updatedShipment : item);
       await setDoc(doc(db, 'shipments', id), updatedShipment);
-      
       version = Date.now();
       res.json({ success: true, shipment: updatedShipment, version });
     } catch (err) {
       console.error('Error updating shipment:', err);
-      res.status(500).json({ error: 'Failed to update shipment in Firestore' });
+      res.status(500).json({ error: 'Failed to update shipment in database' });
     }
   });
 
@@ -217,12 +214,11 @@ async function startServer() {
       const { id } = req.params;
       shipments = shipments.filter(item => item.id !== id);
       await deleteDoc(doc(db, 'shipments', id));
-      
       version = Date.now();
       res.json({ success: true, version });
     } catch (err) {
       console.error('Error deleting shipment:', err);
-      res.status(500).json({ error: 'Failed to delete shipment in Firestore' });
+      res.status(500).json({ error: 'Failed to delete shipment from database' });
     }
   });
 
@@ -240,7 +236,6 @@ async function startServer() {
       if (targetShipment) {
         await setDoc(doc(db, 'shipments', id), targetShipment);
       }
-      
       version = Date.now();
       res.json({ success: true, version });
     } catch (err) {
@@ -255,12 +250,11 @@ async function startServer() {
       const newLog: ActivityLog = req.body;
       activityLogs = [newLog, ...activityLogs];
       await setDoc(doc(db, 'activityLogs', newLog.id), newLog);
-      
       version = Date.now();
       res.json({ success: true, version });
     } catch (err) {
-      console.error('Error saving log:', err);
-      res.status(500).json({ error: 'Failed to save log in Firestore' });
+      console.error('Error saving log to Firestore:', err);
+      res.status(500).json({ error: 'Failed to save log to database' });
     }
   });
 
@@ -275,12 +269,11 @@ async function startServer() {
         registeredUsers.push(userPayload);
       }
       await setDoc(doc(db, 'registeredUsers', userPayload.id), userPayload);
-      
       version = Date.now();
       res.json({ success: true, version });
     } catch (err) {
       console.error('Error saving user:', err);
-      res.status(500).json({ error: 'Failed to register/update user in Firestore' });
+      res.status(500).json({ error: 'Failed to register/update user' });
     }
   });
 
@@ -289,12 +282,11 @@ async function startServer() {
       const { id } = req.params;
       registeredUsers = registeredUsers.filter(u => u.id !== id);
       await deleteDoc(doc(db, 'registeredUsers', id));
-      
       version = Date.now();
       res.json({ success: true, version });
     } catch (err) {
       console.error('Error deleting user:', err);
-      res.status(500).json({ error: 'Failed to delete user in Firestore' });
+      res.status(500).json({ error: 'Failed to delete user' });
     }
   });
 
@@ -304,12 +296,11 @@ async function startServer() {
       const { logo } = req.body;
       companyLogo = logo;
       await setDoc(doc(db, 'brandConfig', 'logo'), { logo });
-      
       version = Date.now();
       res.json({ success: true, version });
     } catch (err) {
       console.error('Error saving logo:', err);
-      res.status(500).json({ error: 'Failed to update company logo in Firestore' });
+      res.status(500).json({ error: 'Failed to update company logo' });
     }
   });
 

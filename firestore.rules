@@ -19,23 +19,23 @@ service cloud.firestore {
       return data.id is string && data.id.size() <= 128
         && data.jobNo is string && data.jobNo.size() <= 128
         && data.customerName is string && data.customerName.size() <= 256
-        && data.status is string
-        && data.shipmentType is string;
+        && data.status is string && data.status.size() <= 128
+        && data.shipmentType is string && data.shipmentType.size() <= 128;
     }
     
     function isValidUser(data) {
       return data.id is string && data.id.size() <= 128
         && data.email is string && data.email.size() <= 256
         && data.fullName is string && data.fullName.size() <= 256
-        && data.role is string
-        && data.password is string;
+        && data.role is string && data.role.size() <= 128
+        && data.password is string && data.password.size() <= 128;
     }
 
     function isValidLog(data) {
       return data.id is string && data.id.size() <= 128
         && data.username is string && data.username.size() <= 256
         && data.action is string && data.action.size() <= 1000
-        && data.timestamp is string;
+        && data.timestamp is string && data.timestamp.size() <= 128;
     }
 
     function isValidLogo(data) {
