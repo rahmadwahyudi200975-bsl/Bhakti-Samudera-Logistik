@@ -1,0 +1,6 @@
+{
+  "name": "Bhakti Samudera Logistik Dashboard",
+  "description": "Sistem monitoring, kontrol operasional, dan cash flow talangan customs clearance PT Bhakti Samudera Logistik secara real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

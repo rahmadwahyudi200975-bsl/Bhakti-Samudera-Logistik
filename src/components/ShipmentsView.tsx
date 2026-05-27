@@ -1,0 +1,1546 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+import { useApp } from '../context/AppContext';
+import { 
+  Plus, 
+  Search, 
+  Trash2, 
+  Edit, 
+  ChevronRight, 
+  Calendar, 
+  FolderLock,
+  X,
+  Container,
+  AlertCircle,
+  CheckSquare,
+  Square,
+  FileUp,
+  File,
+  Info,
+  History,
+  Clock,
+  AlertTriangle,
+  ArrowUpRight
+} from 'lucide-react';
+import { validateISO6346 } from '../utils/containerValidator';
+import { 
+  Shipment, 
+  ContainerSize, 
+  CustomClearanceStatus, 
+  STATUS_FLOW, 
+  InvoiceStatus, 
+  CashFlowStatus,
+  DocumentChecklist
+} from '../types';
+import { getSumOfCosts, formatRupiah } from '../data';
+import FormattedNumberInput from './FormattedNumberInput';
+import AutomationDesk from './AutomationDesk';
+
+export default function ShipmentsView() {
+  const { 
+    shipments, 
+    addShipment, 
+    updateShipment, 
+    deleteShipment 
+  } = useApp();
+
+  // 1. FILTERS & SEARCH STATES
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [containerFilter, setContainerFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('eta-asc');
+
+  // MODAL / DIALOG WORKFLOW STATES
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
+
+  // HELPER METRICS AND INTERACTIONS (On-the-fly checklists, automatic delays calculation, mock uploaded files persistence)
+  const getDocChecklistFraction = (s: Shipment): string => {
+    const list = s.documentChecklist;
+    if (!list) return '0/6';
+    let count = 0;
+    if (list.billOfLading) count++;
+    if (list.invoicePackingList) count++;
+    if (list.pibDeclaration) count++;
+    if (list.customsTaxPaid) count++;
+    if (list.doReleased) count++;
+    if (list.sppbReleased) count++;
+    return `${count}/6`;
+  };
+
+  const getDaysDelay = (targetDate?: string, status?: string): number => {
+    if (!targetDate || status === 'Completed') return 0;
+    const target = new Date(targetDate);
+    const today = new Date();
+    target.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    if (today.getTime() > target.getTime()) {
+      const diff = today.getTime() - target.getTime();
+      return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+    return 0;
+  };
+
+  const toggleRowChecklist = (shipment: Shipment, documentField: keyof DocumentChecklist) => {
+    const defaultList: DocumentChecklist = shipment.documentChecklist || {
+      billOfLading: false,
+      invoicePackingList: false,
+      pibDeclaration: false,
+      customsTaxPaid: false,
+      doReleased: false,
+      sppbReleased: false
+    };
+    const updated = {
+      ...defaultList,
+      [documentField]: !defaultList[documentField]
+    };
+    updateShipment({
+      ...shipment,
+      documentChecklist: updated
+    });
+  };
+
+  const handleSimulateAttachFile = (shipment: Shipment) => {
+    const fileNames = [
+      'Packing_List_Revised.pdf',
+      'PIB_Final_Draft.pdf',
+      'SPPB_Customs_Issued.pdf',
+      'Commercial_Invoice_Certified.pdf',
+      'Authorized_Delivery_Order.pdf'
+    ];
+    const baseFiles = shipment.attachments || [];
+    const randomFileName = fileNames[baseFiles.length % fileNames.length];
+    
+    const newAttach = {
+      id: Date.now().toString(),
+      fileName: randomFileName,
+      fileSize: `${Math.floor(100 + Math.random() * 800)} KB`,
+      uploadedAt: new Date().toISOString().split('T')[0]
+    };
+
+    updateShipment({
+      ...shipment,
+      attachments: [...baseFiles, newAttach]
+    });
+  };
+
+  const handleSimulateRemoveFile = (shipment: Shipment, fileId: string) => {
+    const baseFiles = shipment.attachments || [];
+    updateShipment({
+      ...shipment,
+      attachments: baseFiles.filter(a => a.id !== fileId)
+    });
+  };
+
+  // Form Tab selection
+  const [activeFormTab, setActiveFormTab] = useState<'general' | 'costs' | 'pricing'>('general');
+
+  // FORM BINDINGS STATES
+  const [formShipmentType, setFormShipmentType] = useState<'Export' | 'Import'>('Import');
+  const [formJobNo, setFormJobNo] = useState('');
+  const [formCustomerName, setFormCustomerName] = useState('');
+  const [formCommodity, setFormCommodity] = useState('');
+  const [formEta, setFormEta] = useState('');
+  const [formBlNumber, setFormBlNumber] = useState('');
+  const [formPibNo, setFormPibNo] = useState('');
+  const [formContainerSize, setFormContainerSize] = useState<ContainerSize>('20ft');
+  const [formContainerQty, setFormContainerQty] = useState(1);
+  const [formStatus, setFormStatus] = useState<CustomClearanceStatus>('Draft');
+  const [formNotes, setFormNotes] = useState('');
+  const [formPortOfDischarge, setFormPortOfDischarge] = useState('');
+
+  // NEW FEATURE BINDINGS (Container valid, Target date, & document checklists)
+  const [formContainerNumber, setFormContainerNumber] = useState('');
+  const [formTargetCompletionDate, setFormTargetCompletionDate] = useState('');
+  const [formCheckBl, setFormCheckBl] = useState(false);
+  const [formCheckPkList, setFormCheckPkList] = useState(false);
+  const [formCheckPib, setFormCheckPib] = useState(false);
+  const [formCheckTaxPaid, setFormCheckTaxPaid] = useState(false);
+  const [formCheckDo, setFormCheckDo] = useState(false);
+  const [formCheckSppb, setFormCheckSppb] = useState(false);
+
+  // Row Expand state for Timeline / Checklist overview
+  const [expandedShipmentId, setExpandedShipmentId] = useState<string | null>(null);
+
+  // Form Costs states (Estimates)
+  const [costDo, setCostDo] = useState(0);
+  const [costStorage, setCostStorage] = useState(0);
+  const [costPdri, setCostPdri] = useState(0);
+  const [costSptnp, setCostSptnp] = useState(0);
+  const [costBahandle, setCostBahandle] = useState(0);
+  const [costUndername, setCostUndername] = useState(0);
+  const [costTrucking, setCostTrucking] = useState(0);
+  const [costExtra, setCostExtra] = useState(0);
+  const [costOperational, setCostOperational] = useState(0);
+  const [costSurveyor, setCostSurveyor] = useState(0);
+
+  // Form Pricing states (Revenue)
+  const [revHandling, setRevHandling] = useState(0);
+  const [revTrucking, setRevTrucking] = useState(0);
+  const [revUndername, setRevUndername] = useState(0);
+  const [revMarkup, setRevMarkup] = useState(0);
+
+  // Open modal for NEW shipment
+  const handleOpenCreateModal = () => {
+    setEditingShipment(null);
+    setActiveFormTab('general');
+    
+    // Reset to defaults
+    setFormShipmentType('Import');
+    const today = new Date().toISOString().split('T')[0];
+    const seq = (shipments.length + 1).toString().padStart(4, '0');
+    setFormJobNo(`JOB/2026/05/${seq}`);
+    setFormCustomerName('');
+    setFormCommodity('');
+    setFormEta(today);
+    setFormBlNumber('');
+    setFormPibNo('');
+    setFormContainerSize('20ft');
+    setFormContainerQty(1);
+    setFormStatus('Draft');
+    setFormNotes('');
+    setFormPortOfDischarge('');
+
+    // Generate a default valid ISO 6346 compliant container number as placeholder
+    setFormContainerNumber('KKFU1094052'); 
+    const threeDaysOut = new Date();
+    threeDaysOut.setDate(threeDaysOut.getDate() + 5);
+    setFormTargetCompletionDate(threeDaysOut.toISOString().split('T')[0]);
+    setFormCheckBl(false);
+    setFormCheckPkList(false);
+    setFormCheckPib(false);
+    setFormCheckTaxPaid(false);
+    setFormCheckDo(false);
+    setFormCheckSppb(false);
+
+    setCostDo(0);
+    setCostStorage(0);
+    setCostPdri(0);
+    setCostSptnp(0);
+    setCostBahandle(0);
+    setCostUndername(0);
+    setCostTrucking(0);
+    setCostExtra(0);
+    setCostOperational(0);
+    setCostSurveyor(0);
+
+    setRevHandling(2500000);
+    setRevTrucking(500000);
+    setRevUndername(0);
+    setRevMarkup(0);
+
+    setIsModalOpen(true);
+  };
+
+  // Open modal for EDIT shipment
+  const handleOpenEditModal = (s: Shipment) => {
+    setEditingShipment(s);
+    setActiveFormTab('general');
+
+    setFormShipmentType(s.shipmentType || 'Import');
+    setFormJobNo(s.jobNo);
+    setFormCustomerName(s.customerName);
+    setFormCommodity(s.commodity);
+    setFormEta(s.eta);
+    setFormBlNumber(s.blNumber);
+    setFormPibNo(s.pibNo);
+    setFormContainerSize(s.containerSize);
+    setFormContainerQty(s.containerQty);
+    setFormStatus(s.status);
+    setFormNotes(s.notes);
+    setFormPortOfDischarge(s.portOfDischarge || '');
+
+    setFormContainerNumber(s.containerNumber || '');
+    setFormTargetCompletionDate(s.targetCompletionDate || '');
+    setFormCheckBl(s.documentChecklist?.billOfLading || false);
+    setFormCheckPkList(s.documentChecklist?.invoicePackingList || false);
+    setFormCheckPib(s.documentChecklist?.pibDeclaration || false);
+    setFormCheckTaxPaid(s.documentChecklist?.customsTaxPaid || false);
+    setFormCheckDo(s.documentChecklist?.doReleased || false);
+    setFormCheckSppb(s.documentChecklist?.sppbReleased || false);
+
+    setCostDo(s.estimatedCosts.doContainer);
+    setCostStorage(s.estimatedCosts.storage);
+    setCostPdri(s.estimatedCosts.pdri);
+    setCostSptnp(s.estimatedCosts.sptnp);
+    setCostBahandle(s.estimatedCosts.bahandle);
+    setCostUndername(s.estimatedCosts.undername);
+    setCostTrucking(s.estimatedCosts.trucking);
+    setCostExtra(s.estimatedCosts.extraCost);
+    setCostOperational(s.estimatedCosts.operationalCost);
+    setCostSurveyor(s.estimatedCosts.surveyorFee);
+
+    setRevHandling(s.revenue.handlingFee);
+    setRevTrucking(s.revenue.truckingSelling);
+    setRevUndername(s.revenue.undernameSelling);
+    setRevMarkup(s.revenue.reimbursementMarkup);
+
+    setIsModalOpen(true);
+  };
+
+  // ADVANCE STATUS IN 1-CLICK WORKFLOW
+  const handleQuickAdvanceStatus = (s: Shipment) => {
+    const currentIndex = STATUS_FLOW.indexOf(s.status);
+    if (currentIndex < STATUS_FLOW.length - 1) {
+      const nextStatus = STATUS_FLOW[currentIndex + 1];
+      
+      let invoiceStat: InvoiceStatus = s.invoiceStatus;
+      let cashStat: CashFlowStatus = s.cashFlowStatus;
+
+      if (nextStatus === 'Completed') {
+        invoiceStat = 'Invoiced';
+      }
+
+      const updated: Shipment = {
+        ...s,
+        status: nextStatus,
+        invoiceStatus: invoiceStat,
+        cashFlowStatus: cashStat
+      };
+      updateShipment(updated);
+    }
+  };
+
+  // Handle Form Submission
+  const handleSaveShipment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formCustomerName || !formCommodity || !formJobNo) {
+      alert('Please fill in all required fields (Job Number, Customer, Commodity).');
+      return;
+    }
+
+    const estimatedCosts = {
+      doContainer: Number(costDo),
+      storage: Number(costStorage),
+      pdri: Number(costPdri),
+      sptnp: Number(costSptnp),
+      bahandle: Number(costBahandle),
+      undername: Number(costUndername),
+      trucking: Number(costTrucking),
+      extraCost: Number(costExtra),
+      operationalCost: Number(costOperational),
+      surveyorFee: Number(costSurveyor)
+    };
+
+    const revenue = {
+      handlingFee: Number(revHandling),
+      truckingSelling: 0,
+      undernameSelling: 0,
+      reimbursementMarkup: 0
+    };
+
+    if (editingShipment) {
+      // EDIT PIPELINE
+      const updated: Shipment = {
+        ...editingShipment,
+        shipmentType: formShipmentType,
+        jobNo: formJobNo,
+        customerName: formCustomerName,
+        commodity: formCommodity,
+        eta: formEta,
+        blNumber: formBlNumber,
+        pibNo: formPibNo,
+        containerSize: formContainerSize,
+        containerQty: Number(formContainerQty),
+        portOfDischarge: formPortOfDischarge,
+        status: formStatus,
+        notes: formNotes,
+        estimatedCosts,
+        revenue,
+        containerNumber: formContainerNumber.toUpperCase().trim(),
+        targetCompletionDate: formTargetCompletionDate,
+        documentChecklist: {
+          billOfLading: formCheckBl,
+          invoicePackingList: formCheckPkList,
+          pibDeclaration: formCheckPib,
+          customsTaxPaid: formCheckTaxPaid,
+          doReleased: formCheckDo,
+          sppbReleased: formCheckSppb
+        }
+      };
+      
+      updated.isApproved = true;
+
+      updateShipment(updated);
+    } else {
+      // CREATE PIPELINE
+      addShipment({
+        shipmentType: formShipmentType,
+        jobNo: formJobNo,
+        customerName: formCustomerName,
+        commodity: formCommodity,
+        eta: formEta,
+        blNumber: formBlNumber,
+        pibNo: formPibNo,
+        containerSize: formContainerSize,
+        containerQty: Number(formContainerQty),
+        portOfDischarge: formPortOfDischarge,
+        status: formStatus,
+        notes: formNotes,
+        estimatedCosts,
+        actualCosts: {
+          doContainer: 0,
+          storage: 0,
+          pdri: 0,
+          sptnp: 0,
+          bahandle: 0,
+          undername: 0,
+          trucking: 0,
+          extraCost: 0,
+          operationalCost: 0,
+          surveyorFee: 0
+        },
+        revenue,
+        invoiceStatus: 'Unbilled',
+        cashFlowStatus: 'Unfunded',
+        isApproved: true,
+        containerNumber: formContainerNumber.toUpperCase().trim(),
+        targetCompletionDate: formTargetCompletionDate,
+        documentChecklist: {
+          billOfLading: formCheckBl,
+          invoicePackingList: formCheckPkList,
+          pibDeclaration: formCheckPib,
+          customsTaxPaid: formCheckTaxPaid,
+          doReleased: formCheckDo,
+          sppbReleased: formCheckSppb
+        },
+        attachments: []
+      });
+    }
+
+    setIsModalOpen(false);
+  };
+
+  // FILTERING AND SORTING LOGIC
+  const filteredShipments = shipments.filter(s => {
+    const searchString = `${s.id} ${s.jobNo} ${s.customerName} ${s.commodity} ${s.blNumber} ${s.pibNo} ${s.portOfDischarge || ''}`.toLowerCase();
+    const matchesSearch = searchString.includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+    const matchesContainer = containerFilter === 'all' || s.containerSize === containerFilter;
+    return matchesSearch && matchesStatus && matchesContainer;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'id-desc':
+        return b.id.localeCompare(a.id);
+      case 'id-asc':
+        return a.id.localeCompare(b.id);
+      case 'eta-desc':
+        return b.eta.localeCompare(a.eta);
+      case 'eta-asc':
+      default:
+        return a.eta.localeCompare(b.eta);
+    }
+  });
+
+  // Badge Style Generators
+  const getStatusBadge = (status: CustomClearanceStatus) => {
+    switch (status) {
+      case 'Draft': return 'bg-slate-100 text-slate-705 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+      case 'Document Checking': return 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-955/20 dark:text-sky-350 dark:border-sky-900/40';
+      case 'Submit PIB': return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-955/20 dark:text-blue-350 dark:border-blue-900/40';
+      case 'Billing Issued': return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-955/20 dark:text-indigo-350 dark:border-indigo-900/40';
+      case 'Paid Pending SPPB': return 'bg-amber-50 text-amber-700 border-amber-250 dark:bg-amber-955/20 dark:text-amber-350 dark:border-amber-900/40';
+      case 'Red Channel / Behandle': return 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-955/20 dark:text-rose-400 dark:border-rose-900/40 font-bold';
+      case 'SPPB Issued': return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-955/20 dark:text-teal-350 dark:border-teal-900/40';
+      case 'Gate Out / Delivery': return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-955/20 dark:text-emerald-350 dark:border-emerald-900/40';
+      case 'Completed': return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-955/20 dark:text-green-350 dark:border-green-900/40';
+    }
+  };
+
+  return (
+    <div id="shipments-view-wrapper" className="space-y-6 animate-fade-in">
+      
+      {/* Title with Action Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-850 dark:text-white uppercase tracking-tight font-sans">Import Shipment Management</h2>
+          <p className="text-xs text-slate-500">
+            Track container customs clearance progress (PIB, Behandle, SPPB) through port gate out delivery.
+          </p>
+        </div>
+        
+        <button
+          id="btn-add-shipment-trigger"
+          onClick={handleOpenCreateModal}
+          className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 shadow-md shadow-blue-900/20 transition-all focus:outline-none shrink-0"
+        >
+          <Plus className="h-4.5 w-4.5" />
+          Register New Shipment
+        </button>
+      </div>
+
+      {/* AUTOMATION DESK WORKSPACE CONTROLLER */}
+      <AutomationDesk />
+
+      {/* FILTER PANEL */}
+      <div className="rounded-2xl border border-slate-205 bg-white p-5 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          {/* Broad Search input */}
+          <div className="relative flex-1">
+            <Search className="absolute top-1/2 left-3.5 h-4.5 w-4.5 -translate-y-1/2 text-slate-400" />
+            <input
+              id="shipments-search-input"
+              type="text"
+              placeholder="Search by ID, JOB, Customer, Commodity, Bill of Lading No..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-4 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 focus:bg-white dark:border-slate-700 dark:bg-slate-805 dark:text-slate-200 dark:focus:border-blue-500 transition-all"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs text-slate-400">Sort by:</span>
+              <select
+                id="shipments-sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-705 outline-none dark:border-slate-700 dark:bg-slate-805 dark:text-slate-300"
+              >
+                <option value="eta-asc">Nearest ETA</option>
+                <option value="eta-desc">Furthest ETA</option>
+                <option value="id-desc">Newest ID</option>
+                <option value="id-asc">Oldest ID</option>
+              </select>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Extended drop filters */}
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* Status filter drop */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Filter Customs Status</label>
+            <select
+              id="shipments-status-filter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-705 outline-none dark:border-slate-700 dark:bg-slate-805 dark:text-slate-300"
+            >
+              <option value="all">All Clearance Stages ({shipments.length})</option>
+              {STATUS_FLOW.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Container Size filter drop */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Container Size</label>
+            <select
+              id="shipments-container-filter"
+              value={containerFilter}
+              onChange={(e) => setContainerFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-705 outline-none dark:border-slate-700 dark:bg-slate-805 dark:text-slate-300"
+            >
+              <option value="all">All Sizes</option>
+              <option value="20ft">20 Feet</option>
+              <option value="40ft">40 Feet</option>
+              <option value="40ft HC">40 Feet HC</option>
+              <option value="LCL">LCL (Less than Container)</option>
+            </select>
+          </div>
+
+          {/* Commodity Shortcut Tags (Dynamic Quick Filters) */}
+          <div className="flex items-end sm:col-span-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mr-1.5 self-center">Popular Commodities:</span>
+              {['Steel', 'Chemical', 'Machine', 'Yarn'].map(c => (
+                <button
+                  key={c}
+                  onClick={() => setSearchTerm(c)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                    searchTerm === c 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-slate-50 border border-slate-150 text-slate-600 dark:bg-slate-805 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="text-[11px] text-rose-500 hover:underline font-bold px-1.5">
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* SHIPLMENT TABLE CLIENT-SIDE INTERACTIVITY */}
+      <div className="rounded-2xl border border-slate-205 bg-white shadow-soft-sm dark:border-slate-800 dark:bg-slate-850 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse table-auto">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider dark:border-slate-850 dark:bg-slate-800">
+                <th className="px-5 py-4 min-w-[120px]">Shipment ID / JOB</th>
+                <th className="px-5 py-4 min-w-[180px]">Customer & Commodity</th>
+                <th className="px-5 py-4 min-w-[110px]">Container Info</th>
+                <th className="px-5 py-4 min-w-[145px]">Port of Discharge</th>
+                <th className="px-5 py-4 min-w-[125px]">ETA & B/L & PIB</th>
+                <th className="px-5 py-4 min-w-[150px]">Clearance Status</th>
+                <th className="px-5 py-4 min-w-[130px]">Funding Estimate</th>
+                <th className="px-5 py-4 text-center min-w-[160px]">Actions & Steps</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-150 dark:divide-slate-805">
+              {filteredShipments.length > 0 ? (
+                filteredShipments.map((s) => {
+                  const totalEstCosts = getSumOfCosts(s.estimatedCosts);
+                  const isSelesai = s.status === 'Completed';
+                  const isExpanded = expandedShipmentId === s.id;
+                  const delayDays = getDaysDelay(s.targetCompletionDate, s.status);
+                  const checklistFraction = getDocChecklistFraction(s);
+
+                  // Calculate checklist numeric percentage
+                  const list = s.documentChecklist || { blCheck: false, pibCheck: false, sppbCheck: false, packingListCheck: false, invoiceCheck: false };
+                  let docsDone = 0;
+                  if (list.blCheck) docsDone++;
+                  if (list.pibCheck) docsDone++;
+                  if (list.sppbCheck) docsDone++;
+                  if (list.packingListCheck) docsDone++;
+                  if (list.invoiceCheck) docsDone++;
+                  const percentDocs = Math.round((docsDone / 5) * 100);
+
+                  return (
+                    <React.Fragment key={s.id}>
+                      <tr 
+                        className={`text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors border-b border-slate-150 dark:border-slate-800/80 ${
+                          s.status === 'Red Channel / Behandle' ? 'bg-rose-50/10 dark:bg-rose-950/5' : ''
+                        } ${isExpanded ? 'bg-blue-50/10 dark:bg-slate-800/60' : ''}`}
+                      >
+                        {/* ID / JOB NUMBER */}
+                        <td className="px-5 py-4">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedShipmentId(isExpanded ? null : s.id)}
+                            className="text-left font-extrabold text-blue-900 hover:text-blue-700 dark:text-blue-400 block text-xs group flex items-center gap-1.5 focus:outline-none"
+                          >
+                            <span className="underline decoration-dotted group-hover:decoration-solid">{s.id}</span>
+                            <span className="text-[10px] text-slate-400">({isExpanded ? 'Collapse' : 'Expand'})</span>
+                          </button>
+                          <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">{s.jobNo}</span>
+                          <span className={`inline-block rounded px-1.5 py-0.5 mt-1 text-[9px] font-extrabold uppercase tracking-wider ${
+                            s.shipmentType === 'Export' 
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
+                              : 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'
+                          }`}>
+                            {s.shipmentType || 'Import'}
+                          </span>
+                        </td>
+
+                        {/* Customer & Commodity */}
+                        <td className="px-5 py-4">
+                          <span className="font-bold text-slate-805 dark:text-slate-100 block truncate max-w-[200px]" title={s.customerName}>
+                            {s.customerName}
+                          </span>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate max-w-[200px]" title={s.commodity}>
+                            {s.commodity}
+                          </p>
+                        </td>
+
+                        {/* CONTAINER INFO WITH ISO VALIDATION */}
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <Container className="h-4 w-4 text-slate-400" />
+                              <span className="font-bold text-slate-700 dark:text-slate-300">{s.containerQty}x</span>
+                              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 font-semibold dark:bg-slate-800 dark:text-slate-400">
+                                {s.containerSize}
+                              </span>
+                            </div>
+                            {s.containerNumber ? (
+                              <div className="flex flex-col gap-0.5 mt-1">
+                                <span className="font-mono text-[10.5px] font-extrabold uppercase text-slate-700 dark:text-slate-300 bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 px-1.5 py-0.5 rounded text-center self-start">
+                                  {s.containerNumber}
+                                </span>
+                                {validateISO6346(s.containerNumber) ? (
+                                  <span className="text-[9px] font-bold text-emerald-600 block">✓ Valid ISO 6346</span>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-rose-500 block animate-pulse">⚠️ Check-digit salah</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-405 italic">No Container</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* PORT OF DISCHARGE */}
+                        <td className="px-5 py-4">
+                          <span className="font-semibold text-slate-750 dark:text-slate-300 text-[11px] block">
+                            {s.portOfDischarge || <span className="text-slate-400 text-[10px] italic">Not Set</span>}
+                          </span>
+                        </td>
+
+                        {/* ETA & TARGET WITH DELAYS */}
+                        <td className="px-5 py-4">
+                          <div className="space-y-1 text-[11px]">
+                            <span className="flex items-center gap-1 text-slate-600 dark:text-slate-305 font-bold">
+                              <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                              <span>ETA: {s.eta}</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 block font-mono">
+                              B/L: <span className="text-slate-550 dark:text-slate-350">{s.blNumber || 'None'}</span>
+                            </span>
+                            {s.targetCompletionDate && (
+                              <div className="pt-0.5">
+                                <span className="text-[9px] text-slate-400 block font-bold">
+                                  Est. Selesai: {s.targetCompletionDate}
+                                </span>
+                                {delayDays > 0 ? (
+                                  <span className="inline-flex items-center gap-0.5 font-bold rounded bg-rose-50 px-1.5 py-0.5 text-[9px] text-rose-600 dark:bg-rose-950/20 dark:text-rose-405 animate-pulse mt-0.5 border border-rose-100">
+                                    <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
+                                    Telat {delayDays} Hari!
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] text-emerald-600 font-semibold block mt-0.5">Dalam Jadwal</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* CLEARANCE STATUS & CHECKLIST COUNT */}
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold self-start ${getStatusBadge(s.status)}`}>
+                              {s.status}
+                            </span>
+                            
+                            <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold dark:text-slate-405 bg-slate-50 border dark:bg-slate-900/50 dark:border-slate-800 px-1.5 py-0.5 rounded self-start mt-1">
+                              <CheckSquare className="h-3 w-3 text-emerald-500" />
+                              <span>Dokumen: {checklistFraction}</span>
+                            </div>
+
+                            {s.notes && (
+                              <div className="mt-1 text-[9px] text-rose-500 font-semibold truncate max-w-[150px]" title={s.notes}>
+                                ⚠️ {s.notes}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* TOTAL ESTIMATED TO DISBURSE */}
+                        <td className="px-5 py-4">
+                          <span className="font-bold text-slate-805 dark:text-white block">
+                            {formatRupiah(totalEstCosts)}
+                          </span>
+                        </td>
+
+                        {/* ACTIONS & ADVANCE WORKFLOW */}
+                        <td className="px-5 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            
+                            {/* 1-click Fast progression bar */}
+                            {!isSelesai ? (
+                              <button
+                                id={`quick-adv-${s.id}`}
+                                onClick={() => handleQuickAdvanceStatus(s)}
+                                className="flex items-center gap-1 text-[10px] font-bold text-blue-650 bg-blue-50 hover:bg-blue-100 rounded-lg px-2.5 py-1.5 transition-all dark:bg-blue-955/20 dark:text-blue-400 border border-blue-200/40"
+                                title="Advance to next clearance stage"
+                              >
+                                Next Step <ChevronRight className="h-3.5 w-3.5" />
+                              </button>
+                            ) : (
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-955/20 rounded px-2 py-1 flex items-center gap-0.5">
+                                ✓ Completed
+                              </span>
+                            )}
+
+                            {/* Chevron expand */}
+                            <button
+                              onClick={() => setExpandedShipmentId(isExpanded ? null : s.id)}
+                              className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
+                                isExpanded
+                                  ? 'bg-blue-600 border-blue-700 text-white'
+                                  : 'bg-slate-50 border-slate-150 text-slate-650 hover:bg-slate-105 dark:bg-slate-800 dark:border-slate-705 dark:text-slate-300'
+                              }`}
+                              title="Tracing Timeline, Document Checklist & Attachments"
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Edit button */}
+                            <button
+                              id={`edit-shp-${s.id}`}
+                              onClick={() => handleOpenEditModal(s)}
+                              className="bg-slate-50 border border-slate-155 p-1.5 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-705 dark:text-slate-300"
+                              title="Edit full shipment specifications"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Delete button */}
+                            <button
+                              id={`del-shp-${s.id}`}
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete shipment ${s.id}?`)) {
+                                  deleteShipment(s.id);
+                                }
+                              }}
+                              className="bg-slate-50 border border-slate-155 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:bg-slate-800 dark:border-slate-705"
+                              title="Delete permanently"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* EXPANDED ACCORDION: STATUS TIMELINE HISTORY + INTERACTIVE DOCUMENT CHECKLIST + ATTACHMENTS */}
+                      {isExpanded && (
+                        <tr className="bg-slate-50/50 dark:bg-slate-900/[0.25]">
+                          <td colSpan={8} className="px-6 py-5 border-b border-slate-150 dark:border-slate-800">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-slate-705 dark:text-slate-300">
+                              
+                              {/* MODULE 1: CLEARANCE TIMELINE HISTORY (5 Columns) */}
+                              <div className="lg:col-span-5 bg-white dark:bg-slate-850 rounded-xl p-4.5 border border-slate-150/85 dark:border-slate-800/80 shadow-soft-xs">
+                                <div className="flex items-center gap-2 mb-3.5 border-b border-slate-100 pb-2 dark:border-slate-800">
+                                  <History className="h-4.5 w-4.5 text-blue-600 shrink-0" />
+                                  <h4 className="font-extrabold text-[11px] uppercase tracking-wider text-slate-855 dark:text-slate-200">
+                                    Progress Tracker (Linimasa Riwayat)
+                                  </h4>
+                                </div>
+
+                                <div className="relative pl-5 space-y-4 text-xs font-sans">
+                                  {/* Connector Line */}
+                                  <div className="absolute left-1.5 top-1 bottom-1 w-0.5 bg-slate-200 dark:bg-slate-800" />
+                                  
+                                  {/* Milestone Stages */}
+                                  {[
+                                    { label: 'Draft', desc: 'Container registered to manifest.', matchIdx: 0 },
+                                    { label: 'Document Checking', desc: 'Customs documents validation checking.', matchIdx: 1 },
+                                    { label: 'Submit PIB', desc: 'Import filing PIB declaration submitted to port office.', matchIdx: 2 },
+                                    { label: 'Billing Issued', desc: 'Operational invoice generated & custom taxes approved.', matchIdx: 3 },
+                                    { label: 'Paid Pending SPPB', desc: 'Advance and duties cleared, waiting custom release SPPB.', matchIdx: 4 },
+                                    { label: 'SPPB Issued', desc: 'SPPB document printed. Allowed to leave port warehouse.', matchIdx: 6 },
+                                    { label: 'Gate Out / Delivery', desc: 'Container loaded on trucking chassis, dispatched to consignee.', matchIdx: 7 },
+                                    { label: 'Completed', desc: 'Disloaded delivery complete at warehouse storage.', matchIdx: 8 }
+                                  ].map((milestone, mIdx) => {
+                                    const isActive = s.status === milestone.label || 
+                                                     (milestone.label === 'Paid Pending SPPB' && s.status === 'Red Channel / Behandle');
+                                    
+                                    // Index comparing
+                                    const shipmentStatusIndex = STATUS_FLOW.indexOf(s.status);
+                                    const milestoneStatusIndex = STATUS_FLOW.indexOf(milestone.label as any);
+                                    const isPast = shipmentStatusIndex >= milestoneStatusIndex || s.status === 'Completed';
+                                    
+                                    return (
+                                      <div key={milestone.label} className="relative flex items-start gap-3 group text-xs animate-fade-in">
+                                        {/* Milestone Bead */}
+                                        <div className={`absolute -left-5 top-1 h-3.5 w-3.5 rounded-full border-2 transition-all flex items-center justify-center ${
+                                          isActive 
+                                            ? 'bg-blue-600 border-blue-600 scale-110 shadow-sm shadow-blue-500/50' 
+                                            : isPast 
+                                              ? 'bg-emerald-500 border-emerald-500' 
+                                              : 'bg-white border-slate-300 dark:bg-slate-800 dark:border-slate-700'
+                                        }`} />
+
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`font-bold inline-flex items-center gap-1.5 ${
+                                            isActive 
+                                              ? 'text-blue-605 dark:text-blue-400 text-[11px]' 
+                                              : isPast 
+                                                ? 'text-emerald-600 dark:text-emerald-400 text-[11px]' 
+                                                : 'text-slate-500 dark:text-slate-400'
+                                          }`}>
+                                            {milestone.label}
+                                            {isActive && (
+                                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse animate-ping" />
+                                            )}
+                                            {milestone.label === 'Paid Pending SPPB' && s.status === 'Red Channel / Behandle' && (
+                                              <span className="bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-450 px-1.5 py-0.5 text-[8.5px] font-extrabold rounded animate-pulse">⚠️ RED CHANNEL / BEHANDLE (FISIK)</span>
+                                            )}
+                                          </p>
+                                          <p className="text-[10.5px] text-slate-405 leading-relaxed mt-0.5">
+                                            {milestone.desc}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* MODULE 2: INTERACTIVE DOKUMEN CHECKLIST (4 Columns) */}
+                              <div className="lg:col-span-4 bg-white dark:bg-slate-850 rounded-xl p-4.5 border border-slate-155/80 dark:border-slate-800/80 shadow-soft-xs flex flex-col justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3.5 border-b border-slate-100 pb-2 dark:border-slate-800 justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                      <CheckSquare className="h-4.5 w-4.5 text-emerald-600 shrink-0" />
+                                      <h4 className="font-extrabold text-[11px] uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                                        Mandatory Checklist Dokumen
+                                      </h4>
+                                    </div>
+                                    <span className="text-[10px] font-mono font-bold bg-slate-50 border dark:bg-slate-900/60 dark:border-slate-805 px-1.5 py-0.5 rounded text-emerald-600">
+                                      {checklistFraction} Mandat
+                                    </span>
+                                  </div>
+
+                                  {/* Progress bar */}
+                                  <div className="mb-4 bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                                    <div 
+                                      className="rounded-full h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
+                                      style={{ width: `${percentDocs}%` }}
+                                    />
+                                  </div>
+
+                                  <p className="text-[10.5px] text-slate-500 mb-3 leading-relaxed">
+                                    Klik baris dokumen di bawah untuk mengubah status kelengkapan berkas fisik secara real-time:
+                                  </p>
+
+                                  <div className="space-y-2">
+                                    {[
+                                      { field: 'blCheck', label: '1. Bill Of Lading (B/L) Original/Telex' },
+                                      { field: 'packingListCheck', label: '2. Packing List (P/L) validated' },
+                                      { field: 'invoiceCheck', label: '3. Commercial Invoice (C/I) complete' },
+                                      { field: 'pibCheck', label: '4. PIB Customs declaration confirmed' },
+                                      { field: 'sppbCheck', label: '5. SPPB Release documentation printed' }
+                                    ].map((docItem) => {
+                                      const isChecked = !!(s.documentChecklist as any)?.[docItem.field];
+                                      return (
+                                        <button
+                                          key={docItem.field}
+                                          type="button"
+                                          onClick={() => toggleRowChecklist(s, docItem.field as any)}
+                                          className="w-full flex items-center justify-between p-2 rounded-xl border text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border-slate-100 dark:border-slate-850"
+                                        >
+                                          <span className={`font-semibold text-xs leading-none ${isChecked ? 'text-slate-400 dark:text-slate-500 line-through opacity-85' : 'text-slate-800 dark:text-slate-200'}`}>
+                                            {docItem.label}
+                                          </span>
+                                          {isChecked ? (
+                                            <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0" />
+                                          ) : (
+                                            <Square className="h-4 w-4 text-slate-300 dark:text-slate-650 group-hover:text-emerald-500 shrink-0" />
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+                                  <span>Tersinkron otomatis</span>
+                                  <span>✓ Operasional Lancar</span>
+                                </div>
+                              </div>
+
+                              {/* MODULE 3: LAMPIRAN BERKAS / FILE ATTACHMENTS (3 Columns) */}
+                              <div className="lg:col-span-3 bg-white dark:bg-slate-850 rounded-xl p-4.5 border border-slate-155/80 dark:border-slate-800/80 shadow-soft-xs flex flex-col justify-between">
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-3.5 border-b border-slate-100 pb-2 dark:border-slate-800">
+                                    <FileUp className="h-4.5 w-4.5 text-blue-600 shrink-0" />
+                                    <h4 className="font-extrabold text-[11px] uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                                      Unggah Bukti & Berkas
+                                    </h4>
+                                  </div>
+
+                                  {/* Drag and drop interactive simulated dropzone */}
+                                  <div 
+                                    onClick={() => handleSimulateAttachFile(s)}
+                                    className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50/20 dark:hover:bg-slate-800 p-3.5 rounded-xl text-center cursor-pointer transition-all mb-3.5"
+                                  >
+                                    <FileUp className="h-6 w-6 text-slate-400 mx-auto mb-1 group-hover:text-blue-500 animate-bounce" />
+                                    <p className="font-extrabold text-[10.5px] text-blue-650">Unggah Berkas Baru</p>
+                                    <p className="text-[9.5px] text-slate-405 mt-0.5">Supports PDF, Image (Max 10MB)</p>
+                                  </div>
+
+                                  {/* Attachments list count */}
+                                  <span className="text-[10px] font-bold text-slate-400 block mb-2">
+                                    Berkas Terunggah ({s.attachments?.length || 0}):
+                                  </span>
+
+                                  <div className="space-y-1.5 max-h-[160px] overflow-y-auto">
+                                    {s.attachments && s.attachments.length > 0 ? (
+                                      s.attachments.map(file => (
+                                        <div 
+                                          key={file.id} 
+                                          className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-150/40 dark:border-slate-800 group"
+                                        >
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <File className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                            <div className="min-w-0">
+                                              <p className="font-bold text-[10.5px] text-slate-705 dark:text-slate-200 truncate max-w-[120px]" title={file.fileName}>
+                                                {file.fileName}
+                                              </p>
+                                              <p className="text-[9px] text-slate-400 font-mono">
+                                                {file.fileSize} • {file.uploadedAt}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSimulateRemoveFile(s, file.id)}
+                                            className="text-rose-500 hover:text-rose-700 bg-white dark:bg-slate-800 p-1 rounded border dark:border-slate-705 opacity-80 hover:opacity-100"
+                                            title="Hapus Berkas"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="p-4.5 text-center rounded-xl bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-150 text-[10px] text-slate-400">
+                                        Belum ada lampiran berkas yang diupload operasional.
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 pt-3 border-t border-slate-150 dark:border-slate-800 text-[9.5px] text-slate-400 leading-normal">
+                                  💡 Supir & Lapangan dapat upload dokumen DO / SP2B via HP.
+                                </div>
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-slate-500 dark:text-slate-600">
+                    <FolderLock className="mx-auto h-12 w-12 text-slate-200 dark:text-slate-700 mb-3 animate-pulse" />
+                    Please adjust your query or clear the status filters.
+                    <p className="text-[11px] text-slate-400 mt-1">No registered shipments match the requested criteria.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* WORKFLOW CREATION / DETAILED SYSTEM DRAWER MODAL */}
+      {isModalOpen && (
+        <div id="shipment-form-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 animate-slide-up flex flex-col my-8 max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-150 p-5 dark:border-slate-800">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-850 dark:text-slate-100 font-sans">
+                  {editingShipment ? `Edit Shipment: ${editingShipment.id}` : 'Register New Import Shipment'}
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Enter all parameters for PIB checks, container volumes, advance configurations, and service billing targets.
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-lg p-1.5 hover:bg-slate-100 text-slate-400 dark:hover:bg-slate-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* TAB SELECTOR FOR MULTI-TAB FORM COMPONENT */}
+            <div className="border-b border-slate-100 bg-slate-50/50 px-5 py-2.5 dark:border-slate-800 dark:bg-slate-855 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveFormTab('general')}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                  activeFormTab === 'general'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                1. Shipment Details
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFormTab('costs')}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                  activeFormTab === 'costs'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                2. Estimate OPeration Expenses
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFormTab('pricing')}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                  activeFormTab === 'pricing'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                3. Selling Rate
+              </button>
+            </div>
+
+            {/* FORM CONTENT SCROLLABLE BODY */}
+            <form onSubmit={handleSaveShipment} className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-slate-705 dark:text-slate-300">
+              
+              {/* TAB 1: GENERAL DRAFT DETAILS */}
+              {activeFormTab === 'general' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Job Number (Required)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g., JOB/2026/05/XXXX"
+                      value={formJobNo}
+                      onChange={(e) => setFormJobNo(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Shipment Type (Export or Import)</label>
+                    <select
+                      value={formShipmentType}
+                      onChange={(e) => setFormShipmentType(e.target.value as 'Export' | 'Import')}
+                      className="w-full rounded-xl border border-slate-205 bg-white p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805 text-slate-700 dark:text-slate-300 font-bold"
+                    >
+                      <option value="Import">Import</option>
+                      <option value="Export">Export</option>
+                    </select>
+                  </div>
+
+                  <div>
+                     <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Customer / Importer Name (Required)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g., PT Importer Name"
+                      value={formCustomerName}
+                      onChange={(e) => setFormCustomerName(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Commodity Description (Required)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g., Steel Coil, Alumina, Spareparts"
+                      value={formCommodity}
+                      onChange={(e) => setFormCommodity(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Vessel Arrival ETA Date</label>
+                    <input
+                      type="date"
+                      value={formEta}
+                      onChange={(e) => setFormEta(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Bill of Lading No (B/L)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., ONEK120938102"
+                      value={formBlNumber}
+                      onChange={(e) => setFormBlNumber(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                     <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">PIB Customs Filing No</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., 023412-10839-2026"
+                      value={formPibNo}
+                      onChange={(e) => setFormPibNo(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Port of Discharge (Pelabuhan Bongkar)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Tanjung Priok, Jakarta"
+                      value={formPortOfDischarge}
+                      onChange={(e) => setFormPortOfDischarge(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Container Size Type</label>
+                    <select
+                      value={formContainerSize}
+                      onChange={(e) => setFormContainerSize(e.target.value as ContainerSize)}
+                      className="w-full rounded-xl border border-slate-205 bg-white p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805 text-slate-700 dark:text-slate-300"
+                    >
+                      <option value="20ft">20 Feet</option>
+                      <option value="40ft">40 Feet</option>
+                      <option value="40ft HC">40 Feet HC</option>
+                      <option value="LCL">LCL</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Container Quantity</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={formContainerQty}
+                      onChange={(e) => setFormContainerQty(Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Clearance Progress Stage</label>
+                    <select
+                      value={formStatus}
+                      onChange={(e) => setFormStatus(e.target.value as CustomClearanceStatus)}
+                      className="w-full rounded-xl border border-slate-205 bg-white p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805 text-slate-700 dark:text-slate-300"
+                    >
+                      {STATUS_FLOW.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* CONTAINER NUMBER STANDARDS & DELAYS CHECKERS */}
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">
+                      Container Number Alfanumerik (11 Karakter)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={11}
+                      placeholder="e.g., KKFU1094052"
+                      value={formContainerNumber}
+                      onChange={(e) => setFormContainerNumber(e.target.value.toUpperCase().trim())}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805 font-mono uppercase font-bold"
+                    />
+                    {formContainerNumber ? (
+                      validateISO6346(formContainerNumber) ? (
+                        <span className="text-[10px] text-emerald-600 block font-bold mt-1">✓ Nomor Kontainer Valid ISO 6346</span>
+                      ) : (
+                        <span className="text-[10px] text-rose-500 block font-bold mt-1 animate-pulse">⚠️ Perhatian: Check-digit kontainer salah / silakan cek kembali ketikan Anda</span>
+                      )
+                    ) : (
+                      <span className="text-[10px] text-slate-400 block mt-1">Masukkan ID Kontainer standar ISO</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">
+                      Estimasi Waktu Selesai (Target Deadline)
+                    </label>
+                    <input
+                      type="date"
+                      value={formTargetCompletionDate}
+                      onChange={(e) => setFormTargetCompletionDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-1">System auto-calculates delays if stage exceeds this date</span>
+                  </div>
+
+                  {/* DOCUMENT LOGISTICS CHECKLISTS */}
+                  <div className="sm:col-span-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <label className="block font-bold text-[10.5px] text-slate-400 uppercase tracking-wider mb-2">
+                      Daftar Ceklis Dokumen Lapangan
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-855 rounded-xl p-4">
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={formCheckBl}
+                          onChange={(e) => setFormCheckBl(e.target.checked)}
+                          className="rounded border-slate-300 h-4 w-4 bg-white text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>Bill Of Lading (B/L)</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={formCheckPkList}
+                          onChange={(e) => setFormCheckPkList(e.target.checked)}
+                          className="rounded border-slate-300 h-4 w-4 bg-white text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>P/L & Invoice (Maks 10MB)</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={formCheckPib}
+                          onChange={(e) => setFormCheckPib(e.target.checked)}
+                          className="rounded border-slate-300 h-4 w-4 bg-white text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>PIB Declaration</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={formCheckTaxPaid}
+                          onChange={(e) => setFormCheckTaxPaid(e.target.checked)}
+                          className="rounded border-slate-300 h-4 w-4 bg-white text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>Customs Tax Paid</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={formCheckDo}
+                          onChange={(e) => setFormCheckDo(e.target.checked)}
+                          className="rounded border-slate-300 h-4 w-4 bg-white text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>DO Released</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={formCheckSppb}
+                          onChange={(e) => setFormCheckSppb(e.target.checked)}
+                          className="rounded border-slate-300 h-4 w-4 bg-white text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>SPPB Clearance</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Operational Issues & Notes (Optional)</label>
+                    <textarea
+                      placeholder="Red Channel, awaiting licensing, etc..."
+                      rows={3}
+                      value={formNotes}
+                      onChange={(e) => setFormNotes(e.target.value)}
+                      className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                    />
+                  </div>
+
+                </div>
+              )}
+
+              {/* TAB 2: ESTIMATED OUTSTANDING ADADVANCES */}
+              {activeFormTab === 'costs' && (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-200/50 text-[11px] text-amber-800 dark:bg-amber-955/15 dark:text-amber-305 flex items-start gap-2">
+                    <AlertCircle className="h-4.5 w-4.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Estimates are for Operational Budgets</p>
+                      <p className="leading-relaxed text-slate-550 dark:text-slate-400 mt-0.5">
+                        Define estimated port advances. Hand-input real disbursed actual expenses afterwards in the <strong>Costing & Funding</strong> view once approved.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">DO Container (IDR)</label>
+                      <FormattedNumberInput
+                        value={costDo}
+                        onChange={setCostDo}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Storage & Demurrage (IDR)</label>
+                      <FormattedNumberInput
+                        value={costStorage}
+                        onChange={setCostStorage}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">PDRI / Import Customs Taxes (IDR)</label>
+                      <FormattedNumberInput
+                        value={costPdri}
+                        onChange={setCostPdri}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">SPTNP Tax Penalty (IDR)</label>
+                      <FormattedNumberInput
+                        value={costSptnp}
+                        onChange={setCostSptnp}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Physical Inspection / Behandle (IDR)</label>
+                      <FormattedNumberInput
+                        value={costBahandle}
+                        onChange={setCostBahandle}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Undername License Rental (IDR)</label>
+                      <FormattedNumberInput
+                        value={costUndername}
+                        onChange={setCostUndername}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Trucking Delivery Fee (IDR)</label>
+                      <FormattedNumberInput
+                        value={costTrucking}
+                        onChange={setCostTrucking}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Extra Costs (IDR)</label>
+                      <FormattedNumberInput
+                        value={costExtra}
+                        onChange={setCostExtra}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Operation Cost (IDR)</label>
+                      <FormattedNumberInput
+                        value={costOperational}
+                        onChange={setCostOperational}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Surveyor Report Inspection (IDR)</label>
+                      <FormattedNumberInput
+                        value={costSurveyor}
+                        onChange={setCostSurveyor}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+
+                  </div>
+
+                  <div className="mt-6 rounded-xl bg-slate-50 p-4 border border-slate-200 text-right dark:bg-slate-855 dark:border-slate-800">
+                    <span className="text-[11px] text-slate-400">Total Budgeted Funding Allocations:</span>
+                    <p className="text-xl font-extrabold text-blue-900 dark:text-blue-450 mt-1">
+                      {formatRupiah(
+                        Number(costDo) + 
+                        Number(costStorage) + 
+                        Number(costPdri) + 
+                        Number(costSptnp) + 
+                        Number(costBahandle) + 
+                        Number(costUndername) + 
+                        Number(costTrucking) + 
+                        Number(costExtra) + 
+                        Number(costOperational) + 
+                        Number(costSurveyor)
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: TRADING SELLING JASA PRICE (REVENUE PROJECTIONS) */}
+              {activeFormTab === 'pricing' && (
+                <div className="space-y-4">
+                  <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-250/40 text-[11px] text-emerald-800 dark:bg-emerald-955/10 dark:text-emerald-305">
+                    💡 <strong>PT Bhakti Samudera Logistik Billing Rules</strong>: Final invoice total is calculated as <strong>Actual Funding Disbursed (Reimbursement)</strong> plus the pure <strong>Service Brokerage Fees</strong> specified below.
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 pt-2">
+                    <div>
+                      <label className="block font-bold text-slate-500 dark:text-slate-400 mb-1">Handling & Document Brokerage Fee (IDR)</label>
+                      <FormattedNumberInput
+                        value={revHandling}
+                        onChange={setRevHandling}
+                        className="w-full rounded-xl border border-slate-205 p-2.5 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-805"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 rounded-xl bg-slate-50 p-4 border border-slate-205 text-right dark:bg-slate-855 dark:border-slate-800">
+                    <span className="text-[11px] text-slate-400">Total Planned Net Service Revenues:</span>
+                    <p className="text-xl font-extrabold text-teal-700 dark:text-teal-400 mt-1">
+                      {formatRupiah(Number(revHandling))}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            </form>
+
+            {/* Modal Bottom controller */}
+            <div className="flex items-center justify-between border-t border-slate-150 p-5 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-855/20 rounded-b-2xl">
+              <div>
+                {/* Visual Alert of incomplete steps */}
+                {activeFormTab !== 'pricing' ? (
+                  <button
+                    id="btn-form-next-tab"
+                    type="button"
+                    onClick={() => {
+                      if (activeFormTab === 'general') setActiveFormTab('costs');
+                      else if (activeFormTab === 'costs') setActiveFormTab('pricing');
+                    }}
+                    className="flex items-center gap-1 font-bold text-blue-605 hover:underline"
+                  >
+                    Continue to Next Step <ChevronRight className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-green-650 font-semibold inline-block">✓ Form completed</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  id="btn-form-cancel"
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 font-bold text-slate-705 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-350"
+                >
+                  Cancel
+                </button>
+                <button
+                  id="btn-form-submit"
+                  type="button"
+                  onClick={handleSaveShipment}
+                  className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-705 shadow-md shadow-blue-900/30"
+                >
+                  {editingShipment ? 'Save Changes' : 'Register Shipment'}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
