@@ -82,9 +82,10 @@ export default function DashboardView() {
 
   // 1. CALCULATE FINANCIALS & STATS
   const totalShipmentsCount = shipments.length;
-  const activeShipments = shipments.filter(s => s.status !== 'Completed');
+  const activeShipments = shipments.filter(s => s.status !== 'Completed' && s.status !== 'Cancelled');
   const activeCount = activeShipments.length;
   const completedCount = shipments.filter(s => s.status === 'Completed').length;
+  const cancelledCount = shipments.filter(s => s.status === 'Cancelled').length;
 
   const redChannelCount = shipments.filter(s => s.status === 'Red Channel / Behandle').length;
 
@@ -201,6 +202,7 @@ export default function DashboardView() {
       case 'SPPB Issued': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-955/20 dark:text-emerald-400';
       case 'Gate Out / Delivery': return 'bg-teal-100 text-teal-800 dark:bg-teal-955/20 dark:text-teal-400';
       case 'Completed': return 'bg-green-100 text-green-800 dark:bg-green-955/20 dark:text-green-400';
+      case 'Cancelled': return 'bg-rose-100/60 text-rose-700 dark:bg-rose-955/25 dark:text-rose-400 border border-rose-250/20 line-through';
       default: return 'bg-slate-100 text-slate-700';
     }
   };

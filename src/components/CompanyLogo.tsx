@@ -41,7 +41,7 @@ export default function CompanyLogo({ className = 'h-11 w-11', size }: CompanyLo
           src={logo}
           alt="Company Logo"
           referrerPolicy="no-referrer"
-          className={`${className} object-contain rounded-lg shrink-0`}
+          className="w-full h-full object-cover rounded-[inherit] shrink-0"
           style={size ? { width: size, height: size } : undefined}
         />
       );
@@ -51,7 +51,7 @@ export default function CompanyLogo({ className = 'h-11 w-11', size }: CompanyLo
     return (
       <div
         id="custom-company-logo-text"
-        className={`${className} flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-extrabold shadow-sm border border-blue-500/20 shrink-0 select-none text-center uppercase tracking-tighter`}
+        className="w-full h-full flex items-center justify-center rounded-[inherit] bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-extrabold shadow-sm border border-blue-500/20 shrink-0 select-none text-center uppercase tracking-tighter"
         style={size ? { width: size, height: size, fontSize: '11px' } : { fontSize: '11px' }}
       >
         {logo.slice(0, 3)}

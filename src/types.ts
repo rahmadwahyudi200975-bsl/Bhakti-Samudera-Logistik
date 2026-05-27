@@ -40,7 +40,8 @@ export type CustomClearanceStatus =
   | 'Red Channel / Behandle'
   | 'SPPB Issued'
   | 'Gate Out / Delivery'
-  | 'Completed';
+  | 'Completed'
+  | 'Cancelled';
 
 export const STATUS_FLOW: CustomClearanceStatus[] = [
   'Draft',

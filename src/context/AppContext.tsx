@@ -30,6 +30,7 @@ interface AppContextType {
   logout: () => void;
   resetPassword: (role: UserRole, newPw: string) => void;
   registerUser: (email: string, fullName: string, role: UserRole, password?: string) => void;
+  updateUser: (id: string, email: string, fullName: string, role: UserRole, password?: string) => void;
   deleteUser: (id: string) => void;
   updateCompanyLogo: (logo: string | null) => void;
 }
@@ -389,6 +390,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUser = (id: string, email: string, fullName: string, role: UserRole, password?: string) => {
+    setRegisteredUsers(prev => prev.map(u => {
+      if (u.id === id) {
+        return {
+          ...u,
+          email: email.trim(),
+          fullName: fullName.trim(),
+          role,
+          password: password || u.password
+        };
+      }
+      return u;
+    }));
+    addLog(`Updated corporate staff access privileges for: ${fullName} (${role})`, 'SYSTEM', 'ACCESS');
+  };
+
   const updateCompanyLogo = (logo: string | null) => {
     setCompanyLogo(logo);
     if (logo) {
@@ -426,6 +443,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logout,
         resetPassword,
         registerUser,
+        updateUser,
         deleteUser,
         updateCompanyLogo
       }}

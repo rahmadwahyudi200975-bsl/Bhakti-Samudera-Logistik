@@ -172,7 +172,7 @@ export default function LoginView() {
 
         {/* Header Branding */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/10 border border-white/10 shadow-md">
+          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/10 border border-white/10 shadow-md overflow-hidden">
             <CompanyLogo className="h-8.5 w-8.5" />
           </div>
           <div>
@@ -243,7 +243,7 @@ export default function LoginView() {
           
           {/* Mobile Display Header (visible on screens under md) */}
           <div className="text-center md:hidden mb-6">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 border border-slate-200/60 dark:bg-slate-800 dark:border-slate-700 shadow-md mb-3">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 border border-slate-200/60 dark:bg-slate-800 dark:border-slate-700 shadow-md mb-3 overflow-hidden">
               <CompanyLogo className="h-10 w-10" />
             </div>
             <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 uppercase">

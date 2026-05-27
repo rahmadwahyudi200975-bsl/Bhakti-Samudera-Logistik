@@ -363,7 +363,7 @@ export default function ReportsView() {
         {/* Report Header Logos & Meta stamp */}
         <div className="flex items-start justify-between border-b pb-6 dark:border-slate-800">
           <div className="flex gap-4">
-            <div className="h-14 w-14 rounded-xl bg-slate-100 border border-slate-200/80 text-white flex items-center justify-center shrink-0 dark:bg-slate-800 dark:border-slate-700">
+            <div className="h-14 w-14 rounded-xl bg-slate-100 border border-slate-200/80 text-white flex items-center justify-center shrink-0 dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
               <CompanyLogo className="h-12 w-12" />
             </div>
             <div>

@@ -88,7 +88,7 @@ export default function Sidebar() {
       >
         {/* Header Branding */}
         <div className="flex h-20 items-center gap-3 border-b border-blue-700/60 px-6 dark:border-slate-800">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 dark:bg-slate-800 border border-white/10 dark:border-slate-750/70 shrink-0">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 dark:bg-slate-800 border border-white/10 dark:border-slate-750/70 shrink-0 overflow-hidden">
             <CompanyLogo className="h-9 w-9" />
           </div>
           <div>

@@ -91,7 +91,7 @@ export default function Topbar() {
         <div className="w-10 md:hidden h-1" />
         
         {/* Premium Corporate Logo badge */}
-        <div className="hidden sm:flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 border border-slate-200/60 shadow-soft-sm shrink-0 dark:bg-slate-800 dark:border-slate-700">
+        <div className="hidden sm:flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 border border-slate-200/60 shadow-soft-sm shrink-0 dark:bg-slate-800 dark:border-slate-700 overflow-hidden">
           <CompanyLogo className="h-9 w-9" />
         </div>
 

@@ -5,11 +5,12 @@
 
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserRole } from '../types';
+import { UserRole, RegisteredUser } from '../types';
 import { 
   Building2, 
   Users, 
   Trash2, 
+  Pencil,
   Plus, 
   Upload, 
   Link, 
@@ -28,6 +29,7 @@ export default function AdminSettingsDesk() {
   const { 
     registeredUsers, 
     registerUser, 
+    updateUser,
     deleteUser, 
     companyLogo, 
     updateCompanyLogo,
@@ -50,6 +52,16 @@ export default function AdminSettingsDesk() {
   const [userRole, setUserRole] = useState<UserRole>('Operation Staff');
   const [password, setPassword] = useState('');
   const [userAlert, setUserAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Edit User input states
+  const [editingUser, setEditingUser] = useState<RegisteredUser | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editUserRole, setEditUserRole] = useState<UserRole>('Operation Staff');
+  const [editPassword, setEditPassword] = useState('');
+
+  // Temporary uploaded logo before save
+  const [tempLogoDataUrl, setTempLogoDataUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,12 +87,26 @@ export default function AdminSettingsDesk() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        updateCompanyLogo(reader.result);
-        setLogoAlert('New logo successfully uploaded and applied!');
-        setTimeout(() => setLogoAlert(null), 3000);
+        setTempLogoDataUrl(reader.result);
+        setLogoAlert('Selected logo loaded! Press "SAVE PHOTO" or "SAVE LOGO" to apply the changes.');
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleSaveUploadedLogo = () => {
+    if (!isWritable) {
+      setLogoAlert('⚠️ Permission Denied: Only Director of Operation can update Logo configuration!');
+      return;
+    }
+    if (!tempLogoDataUrl) {
+      setLogoAlert('Please choose or drop an image file first!');
+      return;
+    }
+    updateCompanyLogo(tempLogoDataUrl);
+    setTempLogoDataUrl(null);
+    setLogoAlert('New logo successfully uploaded, applied and saved!');
+    setTimeout(() => setLogoAlert(null), 3000);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -120,6 +146,7 @@ export default function AdminSettingsDesk() {
     updateCompanyLogo(logoUrl.trim());
     setLogoAlert('URL-based logo saved successfully!');
     setLogoUrl('');
+    setTempLogoDataUrl(null);
     setTimeout(() => setLogoAlert(null), 3000);
   };
 
@@ -135,6 +162,7 @@ export default function AdminSettingsDesk() {
       return;
     }
     updateCompanyLogo(logoText.trim().toUpperCase());
+    setTempLogoDataUrl(null);
     setLogoAlert('Official text monogram logo configured successfully!');
     setTimeout(() => setLogoAlert(null), 3000);
   };
@@ -144,9 +172,10 @@ export default function AdminSettingsDesk() {
       setLogoAlert('⚠️ Permission Denied: Only Director of Operation can update Logo configuration!');
       return;
     }
+    setTempLogoDataUrl(null);
     updateCompanyLogo(null);
     setLogoAlert('Company logo successfully reverted to default BSL Maritime standard!');
-    setTimeout(() => setLogoAlert(null), 3500);
+    setTimeout(() => setLogoAlert(null), 3550);
   };
 
   // Add User Registration handler
@@ -188,6 +217,44 @@ export default function AdminSettingsDesk() {
     setEmail('');
     setPassword('');
     setTimeout(() => setUserAlert(null), 4000);
+  };
+
+  const handleUpdateUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setUserAlert(null);
+
+    if (!isWritable) {
+      setUserAlert({ type: 'error', message: '⚠️ Permission Denied: Only Director of Operation can edit corporate staff access portal!' });
+      return;
+    }
+
+    if (editingUser) {
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(editEmail)) {
+        setUserAlert({ type: 'error', message: 'Invalid email format!' });
+        return;
+      }
+
+      // Check duplicate email (excluding the user being edited)
+      const duplicate = registeredUsers.find(u => u.id !== editingUser.id && u.email.toLowerCase() === editEmail.trim().toLowerCase());
+      if (duplicate) {
+        setUserAlert({ type: 'error', message: 'This email address is already registered under another account!' });
+        return;
+      }
+
+      if (editPassword.length < 5) {
+        setUserAlert({ type: 'error', message: 'Password must consist of at least 5 characters!' });
+        return;
+      }
+
+      updateUser(editingUser.id, editEmail, editFullName, editUserRole, editPassword);
+      setEditingUser(null);
+      setUserAlert({ 
+        type: 'success', 
+        message: `Active member "${editFullName}" credentials updated successfully!` 
+      });
+      setTimeout(() => setUserAlert(null), 4000);
+    }
   };
 
   return (
@@ -251,29 +318,42 @@ export default function AdminSettingsDesk() {
               {/* Real-time logo widget preview */}
               <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-slate-200/80 dark:bg-slate-850 dark:border-slate-800 text-center shadow-soft-sm">
                 <span className="text-[10px] text-slate-400 font-bold block mb-3 uppercase tracking-widest font-mono">Real-time Preview</span>
-                <div className="h-20 w-20 flex items-center justify-center rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900 shadow-inner p-2 mb-3">
-                  {companyLogo ? (
+                <div className={`h-20 w-20 flex items-center justify-center rounded-2xl border border-slate-150 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900 shadow-inner mb-3 overflow-hidden ${companyLogo || tempLogoDataUrl ? 'p-0' : 'p-2'}`}>
+                  {tempLogoDataUrl ? (
+                    <img
+                      src={tempLogoDataUrl}
+                      alt="Pending Preview Logo"
+                      className="h-full w-full object-cover animate-pulse"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : companyLogo ? (
                     companyLogo.startsWith('data:') || companyLogo.startsWith('http://') || companyLogo.startsWith('https://') ? (
                       <img
                         src={companyLogo}
                         alt="Preview Logo"
-                        className="h-16 w-16 object-contain rounded"
+                        className="h-full w-full object-cover"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-extrabold flex items-center justify-center text-sm shadow-sm">
+                      <div className="h-full w-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-extrabold flex items-center justify-center text-sm shadow-sm uppercase tracking-tighter select-none">
                         {companyLogo.slice(0, 3)}
                       </div>
                     )
                   ) : (
-                    <div className="text-slate-300 italic text-[11px]">Default Logo (B)</div>
+                    <div className="text-slate-300 italic text-[11px] select-none">Default (B)</div>
                   )}
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 text-center w-full">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-350 block">
-                    {companyLogo ? (companyLogo.startsWith('data:') ? 'Custom Upload Base64' : companyLogo.startsWith('http') ? 'External Web URL' : `Text Monogram ("${companyLogo}")`) : 'Default Maritime BSL'}
+                    {tempLogoDataUrl ? (
+                      <span className="text-amber-600 dark:text-amber-400 font-extrabold text-[11px] uppercase tracking-wider block animate-pulse">⚠️ PENDING SAVE</span>
+                    ) : companyLogo ? (
+                      companyLogo.startsWith('data:') ? 'Custom Upload Base64' : companyLogo.startsWith('http') ? 'External Web URL' : `Text Monogram ("${companyLogo}")`
+                    ) : (
+                      'Default Maritime BSL'
+                    )}
                   </span>
-                  {companyLogo && (
+                  {companyLogo && !tempLogoDataUrl && (
                     <button
                       type="button"
                       onClick={handleResetLogo}
@@ -328,38 +408,72 @@ export default function AdminSettingsDesk() {
 
               {/* File Upload Canvas Tab */}
               {logoType === 'upload' && (
-                <div 
-                  id="logo-drag-drop-zone"
-                  onDragEnter={handleDrag}
-                  onDragOver={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] select-none ${
-                    dragActive 
-                      ? 'border-blue-500 bg-blue-500/5 dark:bg-blue-400/5' 
-                      : 'border-slate-250 hover:border-blue-500 dark:border-slate-800 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleLogoFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <ImageIcon className="h-8 w-8 text-blue-600 mb-2 dark:text-blue-400" />
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                    Drag & drop logo file here, or <span className="text-blue-600 dark:text-blue-400 hover:underline">choose file</span>
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Supported formats: PNG, JPG, WEBP, or SVG. Maximum 1.5MB.
-                  </p>
-                </div>
+                tempLogoDataUrl ? (
+                  <div className="border-2 border-dashed border-amber-300 bg-amber-500/5 dark:border-amber-800/40 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-14 w-14 rounded-xl overflow-hidden border border-amber-300 shadow-sm flex-shrink-0">
+                        <img src={tempLogoDataUrl} className="h-full w-full object-cover" alt="Loaded preview" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-slate-850 dark:text-slate-100">Selected Photo Loaded</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">Image processed successfully but not yet saved as the official company logo.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2.5 w-full max-w-xs">
+                      <button
+                        type="button"
+                        onClick={handleSaveUploadedLogo}
+                        className="flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                      >
+                        <Check className="h-3.5 w-3.5" /> SAVE LOGO
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTempLogoDataUrl(null);
+                          setLogoAlert(null);
+                        }}
+                        className="py-2 px-4 border border-slate-200 text-slate-500 hover:text-slate-850 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-750 dark:hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    id="logo-drag-drop-zone"
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[140px] select-none ${
+                      dragActive 
+                        ? 'border-blue-500 bg-blue-500/5 dark:bg-blue-400/5' 
+                        : 'border-slate-250 hover:border-blue-500 dark:border-slate-800 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleLogoFile(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <ImageIcon className="h-8 w-8 text-blue-600 mb-2 dark:text-blue-400" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      Drag & drop logo file here, or <span className="text-blue-600 dark:text-blue-400 hover:underline">choose file</span>
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Supported formats: PNG, JPG, WEBP, or SVG. Maximum 1.5MB.
+                    </p>
+                  </div>
+                )
               )}
 
               {/* Link Image URL Tab */}
@@ -575,32 +689,53 @@ export default function AdminSettingsDesk() {
                           <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
                             {user.password || '•••••'}
                           </td>
-                          <td className="py-3 px-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!isWritable) {
-                                  alert("🛡️ Permission Denied: Only Director of Operation can revoke registered user access portal!");
-                                  return;
-                                }
-                                if (isMe) {
-                                  alert("You cannot revoke access for your own currently logged-in account!");
-                                  return;
-                                }
-                                if (confirm(`Confirm: Revoke portal access for "${user.fullName}" (${user.email})?`)) {
-                                  deleteUser(user.id);
-                                }
-                              }}
-                              disabled={isMe}
-                              className={`p-1.5 rounded-lg border transition-all ${
-                                isMe 
-                                  ? 'text-slate-300 border-slate-100 cursor-not-allowed dark:text-slate-750 dark:border-slate-800' 
-                                  : 'text-rose-600 border-rose-200 bg-rose-50/60 hover:bg-rose-100 dark:hover:bg-rose-950 dark:border-rose-900/40'
-                              }`}
-                              title={isMe ? "Your active account" : "Revoke Access"}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                          <td className="py-3 px-4 text-center mr-0">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!isWritable) {
+                                    alert("🛡️ Permission Denied: Only Director of Operation can update active members credentials!");
+                                    return;
+                                  }
+                                  setEditingUser(user);
+                                  setEditFullName(user.fullName);
+                                  setEditEmail(user.email);
+                                  setEditUserRole(user.role);
+                                  setEditPassword(user.password || '');
+                                }}
+                                className="p-1.5 rounded-lg border border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-blue-600 transition-all dark:border-blue-900/30 dark:hover:bg-blue-950 dark:text-blue-400 cursor-pointer"
+                                title="Edit Access Rights"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!isWritable) {
+                                    alert("🛡️ Permission Denied: Only Director of Operation can revoke registered user access portal!");
+                                    return;
+                                  }
+                                  if (isMe) {
+                                    alert("You cannot revoke access for your own currently logged-in account!");
+                                    return;
+                                  }
+                                  if (confirm(`Confirm: Revoke portal access for "${user.fullName}" (${user.email})?`)) {
+                                    deleteUser(user.id);
+                                  }
+                                }}
+                                disabled={isMe}
+                                className={`p-1.5 rounded-lg border transition-all ${
+                                  isMe 
+                                    ? 'text-slate-300 border-slate-100 cursor-not-allowed dark:text-slate-755 dark:border-slate-800' 
+                                    : 'text-rose-600 border-rose-200 bg-rose-50/60 hover:bg-rose-100 dark:hover:bg-rose-950 dark:border-rose-900/40 cursor-pointer'
+                                }`}
+                                title={isMe ? "Your active account" : "Revoke Access"}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -612,6 +747,105 @@ export default function AdminSettingsDesk() {
 
           </div>
 
+        </div>
+      )}
+
+      {/* Edit User Floating Modal Overlay */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-soft-xl max-w-sm w-full p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#005cbb] dark:text-blue-400 font-mono">Security & Access Control</span>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1">Edit Access Rights</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUserSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-4 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 outline-none focus:border-blue-500 font-medium"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                  Portal Access Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-4 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 outline-none focus:border-blue-500 font-medium font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                    Authority Role
+                  </label>
+                  <select
+                    value={editUserRole}
+                    onChange={(e) => setEditUserRole(e.target.value as UserRole)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-850 dark:bg-slate-950 py-2 px-3 text-xs text-slate-800 dark:text-slate-100 outline-none focus:bg-white font-bold select-none cursor-pointer"
+                  >
+                    <option value="President Director">👑 President Director</option>
+                    <option value="Director of Operation">⚙️ Director of Operation</option>
+                    <option value="Director of Finance">💼 Director of Finance</option>
+                    <option value="Finance Staff">💳 Finance Staff</option>
+                    <option value="Operation Staff">⚓ Operation Staff</option>
+                    <option value="Director">🛡️ Director (Legacy)</option>
+                    <option value="Staff">🔑 Staff Ops (Legacy)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-black tracking-wider text-slate-400 dark:text-slate-550 uppercase">
+                    Passphrase Key
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-4 py-2 text-xs text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 outline-none focus:border-blue-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-700 hover:shadow-md text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ease-out duration-150 active:scale-95"
+                >
+                  <Check className="h-4 w-4" /> SAVE CHANGES
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="py-2 px-4 border border-slate-200 hover:bg-slate-50 dark:border-slate-850 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
