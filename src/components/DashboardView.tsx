@@ -20,7 +20,6 @@ import {
   Ship, 
   ChevronRight, 
   CheckCircle2,
-  HeartCrack,
   Truck,
   FileSpreadsheet,
   Layers,
@@ -158,38 +157,7 @@ export default function DashboardView() {
     });
   })();
 
-  // 4. COMPILE DATA FOR RED VS GREEN CHANNELS (PIE CHART)
-  const channelData = (() => {
-    const redCount = shipments.filter(s => 
-      s.status === 'Red Channel / Behandle' || 
-      s.actualCosts.bahandle > 0 || 
-      (s.notes && s.notes.toLowerCase().includes('merah')) ||
-      (s.notes && s.notes.toLowerCase().includes('behandle')) ||
-      (s.notes && s.notes.toLowerCase().includes('red'))
-    ).length;
-
-    const greenCount = Math.max(0, shipments.length - redCount);
-    const total = redCount + greenCount;
-
-    return [
-      { 
-        name: 'Green Channel', 
-        value: greenCount, 
-        color: '#10b981', 
-        desc: 'Direct Clearance / SPPB Automated',
-        percent: total > 0 ? Math.round((greenCount / total) * 100) : 0
-      },
-      { 
-        name: 'Red Channel', 
-        value: redCount, 
-        color: '#ef4444', 
-        desc: 'Physical Inspection / Behandle',
-        percent: total > 0 ? Math.round((redCount / total) * 100) : 0
-      }
-    ];
-  })();
-
-  // 5. COMPILE DATA FOR CUSTOMS LANES (DONUT CHART)
+  // 4. COMPILE DATA FOR CUSTOMS LANES (DONUT CHART)
   const customsLaneData = (() => {
     let greenCount = 0;
     let yellowCount = 0;
@@ -209,21 +177,18 @@ export default function DashboardView() {
         name: 'GREEN LANE', 
         value: greenCount, 
         color: '#10b981', 
-        desc: 'Direct clearance. Documents & cargo cleared automatically.',
         percent: total > 0 ? Math.round((greenCount / total) * 100) : 0
       },
       { 
         name: 'YELLOW LANE', 
         value: yellowCount, 
         color: '#eab308', 
-        desc: 'Document verification. Physical inspection not mandatory.',
         percent: total > 0 ? Math.round((yellowCount / total) * 100) : 0
       },
       { 
         name: 'RED LANE', 
         value: redCount, 
         color: '#ef4444', 
-        desc: 'Physical examination. Inspection of goods and documents.',
         percent: total > 0 ? Math.round((redCount / total) * 100) : 0
       }
     ];
@@ -520,137 +485,64 @@ export default function DashboardView() {
 
       </div>
 
-      {/* 4. CUSTOMS CHANNELS & LANES SEGMENTATION */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Left: Pie Distribution of Red & Green Channels */}
-        <div className="rounded-2xl border border-slate-205 bg-white p-6 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850 flex flex-col">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-              Red & Green Customs Channels
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Container status distribution segmented by customs clearance channels.
-            </p>
-          </div>
-
-          <div id="pie-chart-container" className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4 py-4">
-            {channelData.length > 0 ? (
-              <>
-                <div className="h-56 w-56 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={channelData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {channelData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: any) => `${value} Shipment(s)`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="flex-1 space-y-1.5 w-full font-sans">
-                  <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Customs Channel</h5>
-                  <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5">
-                    {channelData.map((d) => (
-                      <div key={d.name} className="flex flex-col text-[11px] p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
-                            <span className="truncate text-slate-700 dark:text-slate-300 font-bold">{d.name}</span>
-                          </div>
-                          <span className="font-extrabold text-slate-900 dark:text-white shrink-0">
-                            {d.value} ({d.percent}%)
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 mt-0.5 ml-4 leading-normal">{d.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center text-xs text-slate-400 py-10 h-56">
-                <HeartCrack className="h-8 w-8 text-slate-300 mb-2" />
-                No shipment data available for customs channel mapping.
-              </div>
-            )}
-          </div>
+      {/* 4. CUSTOMS LANES SEGMENTATION */}
+      <div className="rounded-2xl border border-slate-205 bg-white p-6 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850 flex flex-col">
+        <div>
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+            CUSTOMS LANE
+          </h3>
         </div>
 
-        {/* Right: Donut Distribution of Customs Lanes */}
-        <div className="rounded-2xl border border-slate-205 bg-white p-6 shadow-soft-sm dark:border-slate-800 dark:bg-slate-850 flex flex-col">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-              Customs Lanes Distribution (Donut Chart)
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Breakdown of registered shipments categorized by port customs lane clearance levels.
-            </p>
-          </div>
-
-          <div id="lane-chart-container" className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-4 py-4">
-            {customsLaneData.some(d => d.value > 0) ? (
-              <>
-                <div className="h-56 w-56 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={customsLaneData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={55}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {customsLaneData.map((entry, index) => (
-                          <Cell key={`cell-lane-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: any) => `${value} Shipment(s)`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="flex-1 space-y-1.5 w-full font-sans">
-                  <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Lane Category</h5>
-                  <div className="max-h-56 overflow-y-auto pr-1 space-y-1.5">
-                    {customsLaneData.map((d) => (
-                      <div key={d.name} className="flex flex-col text-[11px] p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
-                            <span className="truncate text-slate-700 dark:text-slate-300 font-bold">{d.name}</span>
-                          </div>
-                          <span className="font-extrabold text-slate-900 dark:text-white shrink-0">
-                            {d.value} ({d.percent}%)
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-405 mt-0.5 ml-4 leading-normal">{d.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center text-xs text-slate-400 py-10 h-56">
-                <Layers className="h-8 w-8 text-slate-300 mb-2" />
-                No shipment data with customs lanes recorded yet.
+        <div id="lane-chart-container" className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-8 py-6">
+          {customsLaneData.some(d => d.value > 0) ? (
+            <>
+              <div className="h-56 w-56 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={customsLaneData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {customsLaneData.map((entry, index) => (
+                        <Cell key={`cell-lane-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: any) => `${value} Shipment(s)`} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            )}
-          </div>
-        </div>
 
+              <div className="flex-1 space-y-2 w-full max-w-lg font-sans">
+                <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1.5">Lane Category</h5>
+                <div className="max-h-60 overflow-y-auto pr-1 space-y-2">
+                  {customsLaneData.map((d) => (
+                    <div key={d.name} className="flex flex-col text-[11px] p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
+                          <span className="truncate text-slate-700 dark:text-slate-300 font-bold">{d.name}</span>
+                        </div>
+                        <span className="font-extrabold text-slate-900 dark:text-white shrink-0">
+                          {d.value} ({d.percent}%)
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center text-xs text-slate-400 py-10 h-56 w-full">
+              <Layers className="h-8 w-8 text-slate-300 mb-2" />
+              No shipment data with customs lanes recorded yet.
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Corporate Admin Branding & Access Control Desk */}
