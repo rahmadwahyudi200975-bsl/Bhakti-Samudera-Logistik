@@ -134,11 +134,11 @@ export default function DashboardView() {
       { key: '2026-12', label: 'Dec' }
     ];
 
-    // Count actual completed shipments per month (YYYY-MM)
+    // Count actual completed shipments per month (YYYY-MM) berdasarkan tanggal barang diterima oleh customer (targetCompletionDate)
     const counts: Record<string, number> = {};
     shipments.forEach(s => {
       if (s.status === 'Completed') {
-        const dateStr = s.createdAt || '2026-05-01';
+        const dateStr = s.targetCompletionDate || s.updatedAt || s.createdAt || '2026-05-01';
         const parts = dateStr.split('-');
         if (parts.length >= 2) {
           const key = `${parts[0]}-${parts[1]}`;
@@ -455,8 +455,8 @@ export default function DashboardView() {
               <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
                 Monthly Shipments Chart
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Jumlah shipment yang telah selesai ditangani dan diterima oleh customer.
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                Jumlah shipment selesai ditangani, dihitung berdasarkan tanggal barang diterima oleh customer.
               </p>
             </div>
           </div>
