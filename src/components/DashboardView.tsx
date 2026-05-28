@@ -134,14 +134,16 @@ export default function DashboardView() {
       { key: '2026-12', label: 'Dec' }
     ];
 
-    // Count actual shipments per month (YYYY-MM)
+    // Count actual completed shipments per month (YYYY-MM)
     const counts: Record<string, number> = {};
     shipments.forEach(s => {
-      const dateStr = s.createdAt || '2026-05-01';
-      const parts = dateStr.split('-');
-      if (parts.length >= 2) {
-        const key = `${parts[0]}-${parts[1]}`;
-        counts[key] = (counts[key] || 0) + 1;
+      if (s.status === 'Completed') {
+        const dateStr = s.createdAt || '2026-05-01';
+        const parts = dateStr.split('-');
+        if (parts.length >= 2) {
+          const key = `${parts[0]}-${parts[1]}`;
+          counts[key] = (counts[key] || 0) + 1;
+        }
       }
     });
 
@@ -454,7 +456,7 @@ export default function DashboardView() {
                 Monthly Shipments Chart
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Total container shipments registered per calendar month.
+                Jumlah shipment yang telah selesai ditangani dan diterima oleh customer.
               </p>
             </div>
           </div>
