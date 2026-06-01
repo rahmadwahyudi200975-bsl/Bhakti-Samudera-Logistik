@@ -5,7 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { Shipment, ActivityLog, RegisteredUser } from './src/types';
 import { initialShipments, initialActivityLogs } from './src/data';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, getDocs, collection, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 async function startServer() {
   const app = express();
@@ -156,6 +156,113 @@ async function startServer() {
 
   // Run initial Firestore sync on boot
   await loadAllFromFirestore();
+
+  // Register Real-Time Firestore listeners on the server to keep all instances synchronized!
+  console.log('Registering real-time Firestore listeners on server...');
+  
+  // 1. Listen to shipments
+  onSnapshot(collection(db, 'shipments'), (snapshot) => {
+    const fetched: Shipment[] = [];
+    const seenJobNos = new Set<string>();
+    const duplicatesToDelete: string[] = [];
+    const rawItems: { id: string; data: Shipment }[] = [];
+
+    snapshot.forEach(docSnap => {
+      rawItems.push({ id: docSnap.id, data: docSnap.data() as Shipment });
+    });
+
+    // Order rawItems by updatedAt descending (newest updated first)
+    rawItems.sort((a, b) => {
+      const dateA = a.data.updatedAt || a.data.createdAt || '';
+      const dateB = b.data.updatedAt || b.data.createdAt || '';
+      return dateB.localeCompare(dateA);
+    });
+
+    for (const item of rawItems) {
+      const normJobNo = (item.data.jobNo || '').trim().toUpperCase();
+      if (!normJobNo) {
+        fetched.push(item.data);
+        continue;
+      }
+      if (seenJobNos.has(normJobNo)) {
+        duplicatesToDelete.push(item.id);
+      } else {
+        seenJobNos.add(normJobNo);
+        fetched.push(item.data);
+      }
+    }
+
+    // Clean up duplicates if any
+    for (const dupId of duplicatesToDelete) {
+      deleteDoc(doc(db, 'shipments', dupId)).catch(err => {
+        console.error(`[DEDUPLICATOR] Listener failed to delete duplicate ${dupId}:`, err);
+      });
+    }
+
+    fetched.sort((a, b) => b.id.localeCompare(a.id));
+    
+    // Compare if different to avoid infinite trigger/version noise
+    const stringifiedPrev = JSON.stringify(shipments.map(s => s.id + (s.updatedAt || s.createdAt || '')));
+    const stringifiedNew = JSON.stringify(fetched.map(s => s.id + (s.updatedAt || s.createdAt || '')));
+    if (stringifiedPrev !== stringifiedNew) {
+      shipments = fetched;
+      version = Date.now();
+      console.log(`[REAL-TIME SYNC] Shipments updated in Firestore. New version: ${version}`);
+    }
+  }, (err) => {
+    console.error('Firestore shipments listener error:', err);
+  });
+
+  // 2. Listen to activityLogs
+  onSnapshot(collection(db, 'activityLogs'), (snapshot) => {
+    const fetched: ActivityLog[] = [];
+    snapshot.forEach(docSnap => {
+      fetched.push(docSnap.data() as ActivityLog);
+    });
+    fetched.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    
+    if (activityLogs.length !== fetched.length) {
+      activityLogs = fetched;
+      version = Date.now();
+      console.log(`[REAL-TIME SYNC] Activity logs updated in Firestore. New version: ${version}`);
+    }
+  }, (err) => {
+    console.error('Firestore activityLogs listener error:', err);
+  });
+
+  // 3. Listen to registeredUsers
+  onSnapshot(collection(db, 'registeredUsers'), (snapshot) => {
+    const fetched: RegisteredUser[] = [];
+    snapshot.forEach(docSnap => {
+      fetched.push(docSnap.data() as RegisteredUser);
+    });
+    
+    const stringifiedPrev = JSON.stringify(registeredUsers.map(u => u.id + u.role));
+    const stringifiedNew = JSON.stringify(fetched.map(u => u.id + u.role));
+    if (stringifiedPrev !== stringifiedNew) {
+      registeredUsers = fetched;
+      version = Date.now();
+      console.log(`[REAL-TIME SYNC] Registered users updated in Firestore. New version: ${version}`);
+    }
+  }, (err) => {
+    console.error('Firestore registeredUsers listener error:', err);
+  });
+
+  // 4. Listen to brandConfig logo selection
+  onSnapshot(collection(db, 'brandConfig'), (snapshot) => {
+    snapshot.forEach(docSnap => {
+      if (docSnap.id === 'logo') {
+        const logo = docSnap.data().logo || null;
+        if (companyLogo !== logo) {
+          companyLogo = logo;
+          version = Date.now();
+          console.log(`[REAL-TIME SYNC] Company logo updated in Firestore. New version: ${version}`);
+        }
+      }
+    });
+  }, (err) => {
+    console.error('Firestore brandConfig listener error:', err);
+  });
 
   // API Endpoints
   // 1. Get entire synced state

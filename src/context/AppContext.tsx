@@ -244,7 +244,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         // Network offline/reconnecting
       }
-    }, 3000);
+    }, 1500);
 
     return () => clearInterval(interval);
   }, []);
