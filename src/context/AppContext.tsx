@@ -187,7 +187,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error('Failed to fetch state');
       const data = await res.json();
       
-      setShipments(data.shipments);
+      // Client-side dynamic deduplication by Job Number (keeping the latest update)
+      const rawShipments: Shipment[] = data.shipments || [];
+      const cleanShipments: Shipment[] = [];
+      const seenJobNos = new Set<string>();
+
+      // Sort with newest updatedAt/createdAt first to keep most recent
+      const sortedIncoming = [...rawShipments].sort((a, b) => {
+        const dateA = a.updatedAt || a.createdAt || '';
+        const dateB = b.updatedAt || b.createdAt || '';
+        return dateB.localeCompare(dateA);
+      });
+
+      for (const s of sortedIncoming) {
+        const normJob = (s.jobNo || '').trim().toUpperCase();
+        if (!normJob) {
+          cleanShipments.push(s);
+          continue;
+        }
+        if (!seenJobNos.has(normJob)) {
+          seenJobNos.add(normJob);
+          cleanShipments.push(s);
+        }
+      }
+
+      // Restore descending display order by ID
+      cleanShipments.sort((a, b) => b.id.localeCompare(a.id));
+      
+      setShipments(cleanShipments);
       setActivityLogs(data.activityLogs);
       setRegisteredUsers(data.registeredUsers);
       setCompanyLogo(data.companyLogo);

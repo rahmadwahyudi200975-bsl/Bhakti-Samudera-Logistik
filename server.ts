@@ -67,9 +67,43 @@ async function startServer() {
         }
       } else {
         const fetched: Shipment[] = [];
+        const seenJobNos = new Set<string>();
+        const duplicatesToDelete: string[] = [];
+        const rawItems: { id: string; data: Shipment }[] = [];
+
         shipmentsSnapshot.forEach(docSnap => {
-          fetched.push(docSnap.data() as Shipment);
+          rawItems.push({ id: docSnap.id, data: docSnap.data() as Shipment });
         });
+
+        // Order rawItems by updatedAt descending (newest updated first)
+        rawItems.sort((a, b) => {
+          const dateA = a.data.updatedAt || a.data.createdAt || '';
+          const dateB = b.data.updatedAt || b.data.createdAt || '';
+          return dateB.localeCompare(dateA);
+        });
+
+        for (const item of rawItems) {
+          const normJobNo = (item.data.jobNo || '').trim().toUpperCase();
+          if (!normJobNo) {
+            fetched.push(item.data);
+            continue;
+          }
+          if (seenJobNos.has(normJobNo)) {
+            duplicatesToDelete.push(item.id);
+            console.log(`[DEDUPLICATOR] Found duplicate shipment in Firestore for JobNo "${normJobNo}" with ID "${item.id}". Deleting...`);
+          } else {
+            seenJobNos.add(normJobNo);
+            fetched.push(item.data);
+          }
+        }
+
+        // Asynchronously clean up duplicates in Firestore so the DB stays clean and tidy
+        for (const dupId of duplicatesToDelete) {
+          deleteDoc(doc(db, 'shipments', dupId)).catch(err => {
+            console.error(`[DEDUPLICATOR] Failed to delete duplicate doc ${dupId} from Firestore:`, err);
+          });
+        }
+
         fetched.sort((a, b) => b.id.localeCompare(a.id));
         shipments = fetched;
       }
@@ -215,6 +249,19 @@ async function startServer() {
     try {
       const rawShipment = req.body;
       const today = new Date().toISOString().split('T')[0];
+
+      // Enforce unique Job Number check at server level to block duplicate creations
+      const normJobNo = (rawShipment.jobNo || '').trim().toUpperCase();
+      if (normJobNo) {
+        const isDuplicate = shipments.some(s => (s.jobNo || '').trim().toUpperCase() === normJobNo);
+        if (isDuplicate) {
+          console.warn(`[DUPLICATE BLOCKED] Prevented shipment register attempt for duplicate JobNo: "${rawShipment.jobNo}"`);
+          return res.status(400).json({ 
+            error: `Gagal menyimpan: Job Number "${rawShipment.jobNo}" sudah ada di sistem dan tidak boleh duplikat!` 
+          });
+        }
+      }
+
       const sequence = (shipments.length + 1).toString().padStart(4, '0');
       const newId = `BSL-2026-${sequence}`;
 
