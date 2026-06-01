@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Slate Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <!-- Container Bright Blue Gradient -->
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <!-- Accent Teal/Green Gradient -->
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <!-- Bright Gold Sun / Light Shine -->
+    <linearGradient id="goldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Maskable Rounded Card Base -->
+  <rect width="100%" height="100%" fill="url(#bgGrad)" rx="112" />
+
+  <!-- Grid Pattern Decoration (Subtle) -->
+  <g opacity="0.08" stroke="#ffffff" stroke-width="1.5">
+    <line x1="64" y1="0" x2="64" y2="512" />
+    <line x1="128" y1="0" x2="128" y2="512" />
+    <line x1="192" y1="0" x2="192" y2="512" />
+    <line x1="256" y1="0" x2="256" y2="512" />
+    <line x1="320" y1="0" x2="320" y2="512" />
+    <line x1="384" y1="0" x2="384" y2="512" />
+    <line x1="448" y1="0" x2="448" y2="512" />
+    
+    <line x1="0" y1="64" x2="512" y2="64" />
+    <line x1="0" y1="128" x2="512" y2="128" />
+    <line x1="0" y1="192" x2="512" y2="192" />
+    <line x1="0" y1="256" x2="512" y2="256" />
+    <line x1="0" y1="320" x2="512" y2="320" />
+    <line x1="0" y1="384" x2="512" y2="384" />
+    <line x1="0" y1="448" x2="512" y2="448" />
+  </g>
+
+  <!-- Cargo Ship & Sea Visualization Group -->
+  <g transform="translate(16, 20)">
+    
+    <!-- Sunset / Global Logistics Circle Backdrop -->
+    <circle cx="240" cy="220" r="130" fill="url(#goldGrad)" opacity="0.15" />
+    <circle cx="240" cy="220" r="100" fill="url(#goldGrad)" opacity="0.1" />
+
+    <!-- Isometric Glowing Cargo Box 1 (Left Blue) -->
+    <path d="M 150 170 L 210 140 L 270 170 L 210 200 Z" fill="url(#blueGrad)" opacity="0.95" />
+    <path d="M 150 170 L 210 200 L 210 260 L 150 230 Z" fill="#1e40af" />
+    <path d="M 210 200 L 270 170 L 270 230 L 210 260 Z" fill="#1d4ed8" />
+    <!-- Horizontal container ribs decoration -->
+    <path d="M 160 180 L 200 200 M 160 195 L 200 215 M 160 210 L 200 230" stroke="#1d4ed8" stroke-width="1.5" opacity="0.4" />
+    <path d="M 220 200 L 260 180 M 220 215 L 260 195 M 220 230 L 260 210" stroke="#3b82f6" stroke-width="1.5" opacity="0.4" />
+
+    <!-- Isometric Glowing Cargo Box 2 (Right Emerald Green) -->
+    <path d="M 250 120 L 310 90 L 370 120 L 310 150 Z" fill="url(#tealGrad)" opacity="0.95" />
+    <path d="M 250 120 L 310 150 L 310 210 L 250 180 Z" fill="#065f46" />
+    <path d="M 310 150 L 370 120 L 370 180 L 310 210 Z" fill="#047857" />
+    <!-- ribs green -->
+    <path d="M 260 130 L 300 150 M 260 145 L 300 165 M 260 160 L 300 180" stroke="#047857" stroke-width="1.5" opacity="0.4" />
+    <path d="M 320 150 L 360 130 M 320 165 L 360 145 M 320 180 L 360 160" stroke="#10b981" stroke-width="1.5" opacity="0.4" />
+
+    <!-- Sea Waves at bottom -->
+    <path d="M 80 320 Q 160 290 240 320 T 400 320 T 560 320" fill="none" stroke="#2563eb" stroke-width="8" stroke-linecap="round" opacity="0.75" />
+    <path d="M 60 345 Q 150 315 240 345 T 420 345" fill="none" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" opacity="0.6" />
+    <path d="M 100 370 Q 180 345 260 370 T 420 370" fill="none" stroke="#1d4ed8" stroke-width="5" stroke-linecap="round" opacity="0.4" />
+
+    <!-- Vessel Hull (Sleek Isometric Design) -->
+    <path d="M 100 280 L 200 280 L 360 220 L 380 230 L 180 310 L 100 310 Z" fill="#f8fafc" />
+    <path d="M 100 310 L 180 310 L 380 230 L 360 250 L 160 330 L 100 330 Z" fill="#cbd5e1" />
+  </g>
+
+  <!-- Glowing Outer Border Decoration -->
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#3b82f6" stroke-width="4" opacity="0.1" />
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.2" />
+
+  <!-- Small Elegant Shield Logo Watermark -->
+  <path d="M 236 410 L 256 400 L 276 410 L 276 430 Q 256 450 236 430 Z" fill="#3b82f6" opacity="0.9" />
+  <path d="M 242 416 L 256 409 L 270 416 L 270 426 Q 256 438 242 426 Z" fill="#ffffff" opacity="0.2" />
+</svg>

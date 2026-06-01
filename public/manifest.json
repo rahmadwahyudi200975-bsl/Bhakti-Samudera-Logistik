@@ -1,0 +1,17 @@
+{
+  "name": "BSL Shipment Tracker",
+  "short_name": "BSL Cargo",
+  "description": "BSL Operational and Logistics Shipment Dashboard and Clearance Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512 1024x1024",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

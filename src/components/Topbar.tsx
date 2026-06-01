@@ -14,7 +14,9 @@ import {
   ChevronDown,
   FileClock,
   LogOut,
-  Anchor
+  Anchor,
+  Smartphone,
+  Download
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { getSumOfCosts, formatRupiah } from '../data';
@@ -36,8 +38,42 @@ export default function Topbar() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(true);
+
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setShowInstallBtn(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallBtn(false);
+      }
+      setDeferredPrompt(null);
+    } else {
+      alert("💡 Cara Pasang Aplikasi BSL Cargo di Android:\n\n1. Buka website ini di Google Chrome di HP Android.\n2. Klik ikon Tiga Titik di kanan atas Chrome.\n3. Pilih 'Instal Aplikasi' atau 'Tambahkan ke Layar Utama'.\n4. Selesai! Aplikasi akan muncul di Home Screen Android Anda.");
+    }
+  };
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -118,6 +154,19 @@ export default function Topbar() {
             2026-05-26 03:25 UTC
           </span>
         </div>
+
+        {/* PWA Android/iOS Download Install Button */}
+        {showInstallBtn && (
+          <button
+            id="pwa-install-button"
+            onClick={handleInstallClick}
+            className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-soft-xs hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-400 px-3.5 py-1.5 text-xs font-bold transition-all shrink-0 cursor-pointer"
+            title="Download / Pasang sebagai Aplikasi Android"
+          >
+            <Smartphone className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 animate-bounce" />
+            <span className="hidden sm:inline">Install App</span>
+          </button>
+        )}
 
         {/* Theme Toggle */}
         <button
