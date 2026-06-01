@@ -262,8 +262,18 @@ async function startServer() {
         }
       }
 
-      const sequence = (shipments.length + 1).toString().padStart(4, '0');
-      const newId = `BSL-2026-${sequence}`;
+      // Find maximum numeric sequence to calculate the next ID without collision (e.g. BSL-2026-0004)
+      let maxSeq = 0;
+      for (const s of shipments) {
+        if (s.id && s.id.startsWith('BSL-2026-')) {
+          const numPart = parseInt(s.id.replace('BSL-2026-', ''), 10);
+          if (!isNaN(numPart) && numPart > maxSeq) {
+            maxSeq = numPart;
+          }
+        }
+      }
+      const nextSeq = maxSeq + 1;
+      const newId = `BSL-2026-${nextSeq.toString().padStart(4, '0')}`;
 
       const newShipment: Shipment = {
         ...rawShipment,
