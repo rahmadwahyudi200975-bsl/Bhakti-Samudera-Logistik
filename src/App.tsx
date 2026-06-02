@@ -27,13 +27,17 @@ function AppContent() {
   return (
     <div id="app-root-shell" className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-205 flex">
       {/* 1. Sidebar Navigation Left Panel */}
-      <Sidebar />
+      <div className="print:hidden">
+        <Sidebar />
+      </div>
 
       {/* 2. Main Ingress Body (Accounting for sidebar padding on desktop) */}
-      <div id="main-content-layout" className="flex-1 flex flex-col min-w-0 md:pl-72 min-h-screen">
+      <div id="main-content-layout" className="flex-1 flex flex-col min-w-0 md:pl-72 print:pl-0 min-h-screen">
         
         {/* Top Header Controls bar */}
-        <Topbar />
+        <div className="print:hidden">
+          <Topbar />
+        </div>
 
         {/* Dynamic Route Content Shell */}
         <main id="primary-route-ingress" className="flex-1 p-6 md:p-10 max-w-[1600px] w-full mx-auto pb-16">

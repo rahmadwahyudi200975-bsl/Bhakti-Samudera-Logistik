@@ -25,7 +25,8 @@ import {
   Layers,
   Lock,
   Clock,
-  RotateCw
+  RotateCw,
+  Printer
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -51,6 +52,15 @@ export default function DashboardView() {
     return now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   });
   const [showSyncSuccess, setShowSyncSuccess] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  const handlePrintPdf = () => {
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 950);
+  };
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -211,10 +221,10 @@ export default function DashboardView() {
   };
 
   return (
-    <div id="dashboard-view-wrapper" className="space-y-8 animate-fade-in">
+    <div id="dashboard-view-wrapper" className="space-y-8 animate-fade-in print:p-8 print:bg-white print:text-slate-900">
       
       {/* TOP TIMELINE INFO BANNER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900 p-6 md:p-8 text-white shadow-lg border border-blue-950">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900 p-6 md:p-8 text-white shadow-lg border border-blue-950 print:hidden">
         <div>
           <span className="rounded-full bg-blue-500/35 px-3.5 py-1 text-[11px] font-bold tracking-wider uppercase">
             Integrated System | {currentRole}
@@ -237,7 +247,7 @@ export default function DashboardView() {
       </div>
 
       {/* REAL-TIME SYNC & QUICK REFRESH CONTROL PANEL */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 shadow-soft-sm transition-all">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 shadow-soft-sm transition-all print:hidden">
         <div className="flex items-center gap-3">
           <div className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -265,6 +275,19 @@ export default function DashboardView() {
               Selesai Sinkronisasi!
             </div>
           )}
+          <button
+            id="print-pdf-btn"
+            onClick={handlePrintPdf}
+            disabled={isPrinting}
+            className={`flex items-center gap-1.5 py-2 px-4 text-xs font-extrabold tracking-wide uppercase rounded-xl border transition-all cursor-pointer ${
+              isPrinting
+                ? 'bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-850 dark:border-slate-800'
+                : 'bg-white border-slate-200 text-slate-705 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 shadow-sm'
+            }`}
+          >
+            <Printer className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+            {isPrinting ? 'Preparing Pdf...' : 'Print Pdf'}
+          </button>
           <button
             id="refresh-realtime-btn"
             onClick={handleRefresh}
@@ -545,7 +568,9 @@ export default function DashboardView() {
       </div>
 
       {/* Corporate Admin Branding & Access Control Desk */}
-      <AdminSettingsDesk />
+      <div className="print:hidden">
+        <AdminSettingsDesk />
+      </div>
 
     </div>
   );
