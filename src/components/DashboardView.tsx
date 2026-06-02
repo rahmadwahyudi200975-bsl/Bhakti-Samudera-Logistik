@@ -223,6 +223,28 @@ export default function DashboardView() {
   return (
     <div id="dashboard-view-wrapper" className="space-y-8 animate-fade-in print:p-8 print:bg-white print:text-slate-900">
       
+      {/* PAGE HEADER ROW WITH PRINT ACTION */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 print:hidden">
+        <div>
+          <h2 className="text-xl font-extrabold text-slate-800 dark:text-white uppercase tracking-tight font-sans">
+            Dashboard Overview
+          </h2>
+          <p className="text-xs text-slate-500 font-sans mt-0.5">
+            Real-time customs clearance pipeline summary, lane distribution, operational flow metrics, and financial status.
+          </p>
+        </div>
+        
+        <button
+          id="btn-print-top-trigger"
+          onClick={handlePrintPdf}
+          disabled={isPrinting}
+          className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-xs font-extrabold uppercase tracking-wider shadow-md hover:shadow-lg hover:shadow-blue-500/10 active:scale-[0.98] transition-all outline-none cursor-pointer disabled:opacity-50"
+        >
+          <Printer className="h-4 w-4" />
+          {isPrinting ? "Preparing Pdf..." : "Print Pdf"}
+        </button>
+      </div>
+
       {/* TOP TIMELINE INFO BANNER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900 p-6 md:p-8 text-white shadow-lg border border-blue-950 print:hidden">
         <div>
